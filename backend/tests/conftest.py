@@ -43,7 +43,7 @@ def _migrated_db():
     from app.db.session import engine
 
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE applications, decisions, entities, entity_links, drift_events, audit_log"))
+        conn.execute(text("TRUNCATE applications, decisions, entities, entity_links, drift_events, audit_log CASCADE"))
     yield
 
 

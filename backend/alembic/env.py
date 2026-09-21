@@ -6,6 +6,7 @@ from alembic import context
 from app import models  # noqa: F401  (registers all tables on Base.metadata)
 from app.core.config import get_settings
 from app.db.base import Base
+from app.semantic import models as _semantic_models  # noqa: F401  (case_embeddings, Lane B)
 
 config = context.config
 if config.config_file_name is not None:

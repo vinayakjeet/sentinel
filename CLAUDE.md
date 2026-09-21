@@ -41,10 +41,10 @@ B6 guardrails/LLM invariant, R1 audit, or a bug that survived 2 fix attempts. As
 One line: "Switch to Opus for <task> — <reason>." Then wait.
 
 ## Current status
-- Lane A: A3a done 13:27. API http://localhost:8000 (/docs), Postgres localhost:5432 (creds in .env). DRAFT docs/openapi.json has all
-  18 routes (freeze 16:00). Live: POST /auth/login (demo users in .env), POST /decisions/application (stub score), GET /decisions[/{id}],
-  /adverse-action. Other routes return 501 until built. SSE auth: GET /stream?token=<jwt>. Lane B: use app/schemas/cases.py + copilot.py
-  in your routers (don't redefine). Sample payload: backend/tests/fixtures/application.json. Next: A3 real scoring (waiting on ml/).
+- Lane A: GATE 1 passed 16:25 (A3 done). Real model lgbm-if-v1 + SHAP top-4 reasons live; docs/openapi.json FROZEN (18 routes).
+  API http://localhost:8000 (/docs), Postgres localhost:5432 (creds in .env). Live: /auth/login, /decisions/*, /adverse-action,
+  /cases/{id}/similar, /copilot/ask (Lane B routers wired + embed hook). 501 until built: /entities graph (A4), /stream*, /metrics* (A5).
+  SSE auth: GET /stream?token=<jwt>. R1 handover items 1, 3, 4 done; item 2 (auth) = A6. Next: A4 entity graph.
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
 - Lane B: R1 audit done (docs/audit-R1.md). gitleaks CLEAN on history. Fixed 3 in my lane incl. a HIGH that crashed Lane A startup (features.json key). LANE A MUST DO: requirements pins, A6 auth enforcement, router wiring, alembic/env.py import.
 - Lane F: not started

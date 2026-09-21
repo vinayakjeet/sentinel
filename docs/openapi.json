@@ -778,7 +778,8 @@
           "cases"
         ],
         "summary": "Nearest past cases by narrative embedding",
-        "operationId": "similar_cases_api_v1_cases__decision_id__similar_get",
+        "description": "Nearest case narratives by cosine similarity over the HNSW index.\n\nSimilarity answers \"does this look like something I have seen before\"; the entity graph\nanswers \"is this connected to something I have seen before\". They are different questions and\nthe console shows both.",
+        "operationId": "get_similar_cases_api_v1_cases__decision_id__similar_get",
         "security": [
           {
             "HTTPBearer": []
@@ -829,16 +830,6 @@
             },
             "description": "Not Found"
           },
-          "501": {
-            "description": "Not implemented yet",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
           "422": {
             "description": "Validation Error",
             "content": {
@@ -858,6 +849,7 @@
           "copilot"
         ],
         "summary": "Ask the read-only analyst copilot about a decision",
+        "description": "Explain a decision that has already been made.\n\nRead-only by construction: the copilot reaches the database only through the tool registry in\napp/llm/tools.py, whose sessions run in a Postgres READ ONLY transaction that is always rolled\nback. There is no code path from here to a score or a decision (CLAUDE.md invariant 1).",
         "operationId": "copilot_ask_api_v1_copilot_ask_post",
         "requestBody": {
           "content": {
@@ -882,16 +874,6 @@
           },
           "404": {
             "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Not implemented yet",
             "content": {
               "application/json": {
                 "schema": {
@@ -1760,7 +1742,9 @@
             "type": "string",
             "maxLength": 128,
             "minLength": 1,
-            "title": "Password"
+            "format": "password",
+            "title": "Password",
+            "writeOnly": true
           }
         },
         "additionalProperties": false,

@@ -67,7 +67,6 @@ def test_login_wrong_password_401(client):
     "method, path",
     [
         ("get", f"/api/v1/entities/{uuid.uuid4()}/graph"),
-        ("get", f"/api/v1/cases/{uuid.uuid4()}/similar"),
         ("get", "/api/v1/metrics"),
         ("post", "/api/v1/stream/start"),
     ],

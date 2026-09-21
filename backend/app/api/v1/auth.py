@@ -12,7 +12,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/login", response_model=TokenResponse, responses={401: {"model": ErrorResponse}})
 def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
-    principal = authenticate(body.username, body.password)
+    principal = authenticate(body.username, body.password.get_secret_value())
     audit_repo.write(
         db,
         actor=body.username,

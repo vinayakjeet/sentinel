@@ -12,6 +12,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /srv
+# torch from the CPU wheel index first; the default index would pull ~2 GB of CUDA packages.
+RUN pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.0
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 

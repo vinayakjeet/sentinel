@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.security import Principal, get_current_user
@@ -10,6 +10,7 @@ from app.schemas.adverse_action import AdverseActionNotice
 from app.schemas.application import ApplicationEvent
 from app.schemas.common import ErrorResponse
 from app.schemas.decision import Band, DecisionList, DecisionResponse
+from app.semantic import embed_decision
 from app.services.adverse_action import NotAdverseAction, build_notice
 from app.services.container import Services, get_services
 from app.services.decision_service import to_response
@@ -26,13 +27,17 @@ router = APIRouter(prefix="/decisions", tags=["decisions"])
 def decide_application(
     event: ApplicationEvent,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     services: Services = Depends(get_services),
     user: Principal = Depends(get_current_user),
 ) -> DecisionResponse:
-    return services.decisions.decide(
+    response = services.decisions.decide(
         db, event, actor=user.username, started_at=request.scope.get("state", {}).get("t0")
     )
+    # Case-narrative embedding runs after the response is sent (outside the latency budget).
+    background_tasks.add_task(embed_decision, response.decision_id)
+    return response
 
 
 @router.get(
