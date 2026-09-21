@@ -227,9 +227,9 @@ fallback still get built and tested regardless — `test_fallback_when_llm_down`
 - [x] B2 featurize + train + artifacts ⚑
 - [x] B3 reason codes + fairness + model card
 - [x] B5 semantic layer (build)
-- [ ] B4 load demo DB + hero cases
-- [ ] B5v semantic verification (ring top-5)
+- [x] B4 load demo DB + hero cases
+- [x] B5v semantic verification (ring top-5)
 - [x] B6 LLM layer (Opus)
-- [x] R1 audit (Opus) - docs/audit-R1.md; repeat after Lane A lands A4-A6
-- [x] R2 tests + CI (workflow written; needs a real run to call green)
-- [ ] R3 docs
+- [x] R1 audit (Opus) - docs/audit-R1.md; R1b re-audit of A4-A6 appended
+- [x] R2 tests + CI - GREEN on two real runs (35599391251, 35601519343)
+- [x] R3 docs

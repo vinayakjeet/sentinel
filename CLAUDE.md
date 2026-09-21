@@ -52,5 +52,19 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
   loads must re-login on 401. Rate limits per user: 600/min default, 3000/min POST /decisions/application, login 10/min/IP.
   CORS allows http://localhost:5173. R1 handover items 1-4 all done. Next: A7 (Lane F integration).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
-- Lane B: R1 audit done (docs/audit-R1.md). gitleaks CLEAN on history. Fixed 3 in my lane incl. a HIGH that crashed Lane A startup (features.json key). LANE A MUST DO: requirements pins, A6 auth enforcement, router wiring, alembic/env.py import.
+- Lane B: B0-B6, R1-R3 ALL DONE. R1's four Lane A items are verified closed (pins, A6 auth, router wiring, alembic import).
+  B4 DONE: 40,000 demo decisions loaded through the API at 15 req/s. All 4 planted rings found (components 21/24/19/15),
+  mean ring score 880.4 vs 367.2, +250 from graph uplift. docs/demo_ids.json has the 3 hero cases, all verified to resolve
+  via /decisions, /entities/{id}/graph and /cases/{id}/similar. The loader is now resumable (--resume) and refreshes its
+  JWT on 401 - re-running it will NOT duplicate rows. DO NOT re-run it without --resume.
+  B5v DONE: docs/ring_similarity.json. Similar-cases retrieves 41.9% actual fraud vs a 9.6% base rate (4.4x), 100% same
+  band; ring members retrieve ring members at 16x chance but only 8.9% of the time, and never their own ring - correct,
+  the narrative carries no identifiers. Cosine similarity is ~0.99 for nearly every pair; ordering within top-5 is weak.
+  R1b DONE: docs/audit-R1.md now has the A4/A5/A6 re-audit. Auth enforcement verified live (401/403 table). No HIGH or
+  MED defect found in Lane A's A4-A6 code. LANE A: one item only - latency is p50 38 ms idle but p50 279 ms under a
+  6-worker bulk load; both are published, nothing to fix unless you want the demo number lower.
+  R2 DONE: CI is GREEN on two real runs (35599391251, 35601519343) - gitleaks, ruff, backend tests on postgres+pgvector,
+  ml tests. main is PUSHED to github.com/vinayakjeet/sentinel (20 commits of all three lanes, human-approved).
+  R3 DONE: README.md with architecture Mermaid, quickstart, demo script, real metrics, and the three required
+  disclosures (synthetic identifiers/rings, 40k subset, REPLAY_SHIFT_FRAUD_RATE fraud wave). responsible-ai.md updated.
 - Lane F: not started
