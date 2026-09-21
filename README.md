@@ -1,5 +1,7 @@
 # SENTINEL — real-time fraud detection for digital lending
 
+[![CI](https://github.com/vinayakjeet/sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/vinayakjeet/sentinel/actions/workflows/ci.yml)
+
 A credit-card application arrives. SENTINEL scores it in under a second, explains the score in
 language an applicant would understand, checks whether the applicant is connected to anyone already
 known to be fraudulent, notices when the fraud pattern itself changes, and lets an analyst ask
@@ -234,14 +236,17 @@ From the 40,000-row demo load (`ml/scripts/load_demo_db.py`, `ml/scripts/verify_
 | planted rings recovered | **4 / 4**, component sizes 21 / 24 / 19 / 15 |
 | mean ring-member score, before → after graph uplift | 619–660 → **864–903** (+250 average) |
 | mean score, ring members vs everyone else | **880.4** vs 367.2 |
-| similar-cases: neighbours that were actually fraud | **41.9%** (93/222) against a 9.6% base rate — **4.4× lift** |
-| similar-cases: neighbours in the same band as the query | 100% |
+| similar-cases: neighbours that were actually fraud (ring-member queries) | 41.9% (93/222) against a 9.6% base rate — but **that lift is the band, not the embedding**: neighbours are in the query's band 100% of the time, and a fraud-band case's neighbours are fraud-rich because the band is |
+| similar-cases: mean-centering, same 41,858-row corpus, raw → centered | random-pair cosine mean 0.799 → 0.007 (std 0.084 → 0.358); top-1 minus top-5 similarity gap 0.005 → 0.027; neighbour fraud rate for fraud queries 40.9% → 41.7%; ring hits in top-5 4/225 → 3/225 |
 
-Read that last pair carefully. Similarity retrieves the *right kind* of case, but cosine similarity
-between these narratives is ~0.99 for nearly every pair, so the ordering inside the top-5 carries
-little information. And ring members mostly do **not** retrieve their own ring — correctly, because
-the narrative contains no identifiers. Finding a ring is the entity graph's job; finding a lookalike
-is this one's. `docs/audit-R1.md` §1b.6 has the full numbers, including the unflattering ones.
+Read those carefully. Raw MiniLM cosine was ~0.80 between *unrelated* narratives and ~0.99 between
+neighbours, so a score of 0.99 meant nothing. Mean-centering (`embedding_mean_v1.json`) fixes the scale
+— unrelated pairs now sit at ~0 — but it does **not** improve retrieval quality: similar-cases returns
+cases in the same band with the same reasons, and adds no measurable fraud signal beyond the band. Use it as
+"cases that read alike", show rank, band and reasons, and do not present the cosine as a probability.
+Ring members mostly do **not** retrieve their own ring — correctly, because the narrative contains no
+identifiers. Finding a ring is the entity graph's job; finding a lookalike is this one's.
+`docs/audit-R1.md` §1b.6 has the full numbers, including the unflattering ones.
 
 Full details: **`docs/model-card.md`**, **`docs/responsible-ai.md`**.
 

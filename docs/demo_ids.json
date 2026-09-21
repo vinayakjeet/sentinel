@@ -4,14 +4,16 @@
   "rows_loaded": 40000,
   "heroes": {
     "clean_looking_ring_member": {
-      "decision_id": "06626752-c841-489c-9b9f-7485590aa64a",
-      "application_id": "f046b448-e978-41b7-968b-a26288abc3e8",
-      "external_ref": "demo-024996",
-      "score": 645,
-      "band": "STEP_UP",
+      "decision_id": "e5eacdb9-9573-4343-8757-46a6d56ca128",
+      "application_id": "58ef30d7-d6cc-495c-8b76-4acf6e581bd2",
+      "external_ref": "demo-027088",
+      "score": 863,
+      "band": "DECLINE",
       "graph_uplift": 0.3,
       "fraud_bool": 1,
-      "component_size": 15
+      "component_size": 16,
+      "model_score_alone": 563,
+      "model_band_alone": "STEP_UP"
     },
     "obvious_fraud": {
       "decision_id": "f7adce42-e12d-4ed0-838d-697efcb1ee76",
