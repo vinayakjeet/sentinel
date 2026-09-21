@@ -91,19 +91,51 @@ def to_payload(row: pd.Series, external_ref: str) -> dict:
     return payload
 
 
-def authenticate(client: httpx.Client, username: str | None, password: str | None) -> str | None:
-    token = os.environ.get("SENTINEL_TOKEN")
-    if token:
-        log("  using SENTINEL_TOKEN from the environment")
-        return token
-    if not (username and password):
-        return None
-    r = client.post(f"{API}/auth/login", json={"username": username, "password": password})
-    if r.status_code != 200:
-        raise SystemExit(f"login failed: HTTP {r.status_code} {r.text[:200]}")
-    token = r.json()["access_token"]
-    log(f"  logged in as {username}")
-    return token
+class Auth:
+    """Holds the bearer token and re-logs-in when it expires mid-load.
+
+    A full load runs longer than the 60-minute token life (JWT_EXPIRE_MINUTES), so a token obtained
+    once at the start would start returning 401 part-way through and silently drop rows. Refresh is
+    guarded so that a burst of concurrent 401s produces one login, not one per worker.
+    """
+
+    def __init__(self, client: httpx.Client, username: str | None, password: str | None) -> None:
+        self._client = client
+        self._username = username
+        self._password = password
+        self._lock = threading.Lock()
+        self.refreshes = 0
+        self.token = os.environ.get("SENTINEL_TOKEN")
+        self.can_refresh = not self.token and bool(username and password)
+        if self.token:
+            log("  using SENTINEL_TOKEN from the environment (cannot be refreshed on expiry)")
+        elif self.can_refresh:
+            self._login()
+            log(f"  logged in as {username}")
+        # else: no auth at all - fine before Lane A's A6, 401 afterwards.
+
+    def _login(self) -> None:
+        r = self._client.post(
+            f"{API}/auth/login", json={"username": self._username, "password": self._password}
+        )
+        if r.status_code != 200:
+            raise SystemExit(f"login failed: HTTP {r.status_code} {r.text[:200]}")
+        self.token = r.json()["access_token"]
+
+    def headers(self) -> dict[str, str]:
+        token = self.token
+        return {"Authorization": f"Bearer {token}"} if token else {}
+
+    def refresh(self, stale: str | None) -> bool:
+        """Re-login unless another worker already replaced `stale`. Returns True if a token is available."""
+        if not self.can_refresh:
+            return False
+        with self._lock:
+            if self.token == stale:
+                self._login()
+                self.refreshes += 1
+                log(f"  token expired - re-logged in as {self._username}")
+        return True
 
 
 class RateLimiter:
@@ -126,6 +158,35 @@ class RateLimiter:
             time.sleep(delay)
 
 
+def fetch_already_loaded(client: httpx.Client, auth: Auth, prefix: str = "demo-") -> dict[str, dict]:
+    """Decisions already in the database, keyed by external_ref.
+
+    History rows are not de-duplicated, so a resumed run must skip what it already sent rather than
+    re-post it. External refs are deterministic (`demo-<row index>`), so the DB is the resume log.
+    """
+    found: dict[str, dict] = {}
+    offset, total, retried = 0, None, False
+    while total is None or offset < total:
+        r = client.get(
+            f"{API}/decisions", params={"limit": 200, "offset": offset}, headers=auth.headers()
+        )
+        if r.status_code == 401 and not retried and auth.refresh(auth.token):
+            retried = True
+            continue
+        retried = False
+        r.raise_for_status()
+        body = r.json()
+        total = body["total"]
+        for item in body["items"]:
+            ref = item.get("external_ref") or ""
+            if ref.startswith(prefix):
+                found[ref] = item
+        offset += 200
+        if not body["items"]:
+            break
+    return found
+
+
 def select_rows(demo: pd.DataFrame, limit: int, ring_devices: set[str]) -> pd.DataFrame:
     """Rows to send. A limited run still includes every ring member, or the graph demo is pointless."""
     if not limit or limit >= len(demo):
@@ -145,6 +206,8 @@ def main() -> int:
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--username", default=os.environ.get("DEMO_ANALYST_USERNAME"))
     ap.add_argument("--password", default=os.environ.get("DEMO_ANALYST_PASSWORD"))
+    ap.add_argument("--resume", action="store_true",
+                    help="skip rows whose external_ref is already in the database (no duplicate history rows)")
     args = ap.parse_args()
 
     demo_path = PROC_DIR / "demo_sample.csv"
@@ -177,8 +240,12 @@ def main() -> int:
             raise SystemExit(f"cannot reach {args.base_url}: {exc}") from exc
         log(f"  /health -> {health.status_code}")
 
-        token = authenticate(client, args.username, args.password)
-        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        auth = Auth(client, args.username, args.password)
+
+        already: dict[str, dict] = {}
+        if args.resume:
+            already = fetch_already_loaded(client, auth)
+            log(f"  resume: {len(already):,} rows already in the database will be skipped, not re-sent")
 
         section("2. Loading")
         limiter = RateLimiter(args.rate)
@@ -187,15 +254,38 @@ def main() -> int:
         started = time.perf_counter()
         lock = threading.Lock()
 
+        def record(body: dict, idx: int, row: pd.Series) -> None:
+            results.append(
+                {
+                    "external_ref": body.get("external_ref") or f"demo-{idx:06d}",
+                    "decision_id": body["decision_id"],
+                    "application_id": body["application_id"],
+                    "score": body["score"],
+                    "band": body["band"],
+                    "graph_uplift": body.get("graph_uplift", 0.0),
+                    "graph_signals": body.get("graph_signals", {}),
+                    "n_reasons": len(body.get("reason_codes", [])),
+                    "latency_ms": body.get("latency_ms", 0.0),
+                    "device_id": row["device_id"],
+                    "fraud_bool": int(row["fraud_bool"]) if pd.notna(row.get("fraud_bool")) else None,
+                }
+            )
+
         def send(item: tuple[int, pd.Series]) -> None:
             idx, row = item
+            ref = f"demo-{idx:06d}"
+            prior = already.get(ref)
+            if prior is not None:
+                with lock:
+                    record(prior, idx, row)
+                return
             limiter.wait()
+            payload = to_payload(row, external_ref=ref)
             try:
-                r = client.post(
-                    f"{API}/decisions/application",
-                    json=to_payload(row, external_ref=f"demo-{idx:06d}"),
-                    headers=headers,
-                )
+                used = auth.token
+                r = client.post(f"{API}/decisions/application", json=payload, headers=auth.headers())
+                if r.status_code == 401 and auth.refresh(used):
+                    r = client.post(f"{API}/decisions/application", json=payload, headers=auth.headers())
             except httpx.HTTPError:
                 with lock:
                     failures[0] += 1
@@ -208,21 +298,7 @@ def main() -> int:
                 return
             body = r.json()
             with lock:
-                results.append(
-                    {
-                        "external_ref": body.get("external_ref") or f"demo-{idx:06d}",
-                        "decision_id": body["decision_id"],
-                        "application_id": body["application_id"],
-                        "score": body["score"],
-                        "band": body["band"],
-                        "graph_uplift": body.get("graph_uplift", 0.0),
-                        "graph_signals": body.get("graph_signals", {}),
-                        "n_reasons": len(body.get("reason_codes", [])),
-                        "latency_ms": body.get("latency_ms", 0.0),
-                        "device_id": row["device_id"],
-                        "fraud_bool": int(row["fraud_bool"]) if pd.notna(row.get("fraud_bool")) else None,
-                    }
-                )
+                record(body, idx, row)
                 if len(results) % 2000 == 0:
                     rate = len(results) / max(1e-9, time.perf_counter() - started)
                     log(f"  {len(results):,} / {len(rows):,}  ({rate:.0f}/s)")

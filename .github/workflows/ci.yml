@@ -169,7 +169,8 @@ jobs:
           ifo = pickle.loads((A / "iforest_v1.pkl").read_bytes())
           pre = pickle.loads((A / "preprocess_v1.pkl").read_bytes())
           feats = json.loads((A / "features.json").read_text())
-          assert set(ifo) == {"model", "min", "max"}, ifo.keys()
+          assert {"model", "min", "max", "features"} <= set(ifo), sorted(ifo)
+          assert ifo["features"] == feats["feature_order"], "iforest was fitted on a different column order"
           assert pre["feature_order"] == feats["feature_order"]
           assert model.best_iteration_ > 10, "model collapsed to a stump"
           print(f"artifacts OK: {feats['n_features']} features, {model.best_iteration_} trees")

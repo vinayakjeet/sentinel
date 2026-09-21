@@ -85,3 +85,80 @@ ruff check backend ml
 python -m pytest ml/tests -q                # 9 passed
 cd backend && python -m pytest tests -q     # needs Postgres; 28 pass without it via --noconftest
 ```
+
+---
+
+# R1b — Re-audit of A4, A5, A6
+
+Audited 21 Sep 2026, at commit `096cc1d`, against the same invariants. This pass covers **only what
+landed after R1**: A4 (entity graph), A5 (replay stream + ADWIN drift), A6 (auth, RBAC, rate limits,
+error handling), plus the CI workflow written in R2. Lane A's stack was live throughout, so every
+claim below was checked against the running API rather than read off the source.
+
+`frontend/` still does not exist.
+
+## 1b.1 — R1 handover items: all four closed
+
+| R1 item | Status | Evidence |
+|---|---|---|
+| 1. ML pins mirrored into `backend/requirements.txt` | **closed** | Zero mismatches across all nine artifact-critical packages; `river==0.26.1` present. |
+| 2. A6 auth enforcement (R1 finding 2 — the API was open, and open as admin) | **closed** | Live status codes below. |
+| 3. Router wiring + `embed_decision` hook | **closed** | `decisions.py:41` schedules `embed_decision` as a BackgroundTask; both routers are on the real implementations. |
+| 4. `alembic/env.py` semantic models import (R1 finding 7) | **closed** | `backend/alembic/env.py:9`. |
+
+Auth, checked live against `http://localhost:8000`:
+
+| Request | Result |
+|---|---|
+| `GET /api/v1/decisions` no token | **401** |
+| `GET /api/v1/decisions` malformed token | **401** — body is `{"detail":"invalid or expired token","request_id":…}`, nothing more |
+| `GET /api/v1/stream` (SSE) no token | **401** |
+| `POST /api/v1/stream/start` as **analyst** | **403** |
+| `POST /api/v1/metrics/drift/reset` as **analyst** | **403** |
+| `POST /api/v1/auth/login` wrong credentials | **401** |
+| `GET /health` no token | **200** (allowed by CLAUDE.md §10) |
+
+R1 finding 6 (no global exception handler) is also closed: `core/errors.py` registers a handler for
+bare `Exception` that logs the traceback server-side and returns an opaque `internal server error`
+plus the `request_id`.
+
+## 1b.2 — New findings
+
+| # | Sev | Where | Issue | Fix | Status |
+|---|---|---|---|---|---|
+| 12 | **MED** | `.github/workflows/ci.yml` — "Artifacts load from a cold interpreter" | The step asserted `set(ifo) == {"model","min","max"}`. R1's own finding-4 fix added `features` and `categorical_encoding` to `iforest_v1.pkl`, so **this assertion was guaranteed to fail on the first real CI run** — a green-looking workflow that had never executed. | Assert the required keys are present (`⊆`) and, more usefully, that `ifo["features"] == features.json["feature_order"]` — the property whose violation would silently produce wrong anomaly scores. | **fixed (mine)** |
+| 13 | **MED** | `ml/scripts/load_demo_db.py` | The loader logged in **once**. A6 sets a 60-minute token life, and measured sustained throughput against the live stack is **13.2 req/s**, not the 30/s the loader requests — so a 40k load takes ~50 min and would have begun taking 401s before finishing, recording them as failures and dropping those rows from the demo data. | Token refresh on 401 (guarded, so a burst of concurrent 401s causes one login, not six), plus `--resume`, which reads the external_refs already in the database and skips them — history rows are not de-duplicated, so resuming had to be exact rather than approximate. | **fixed (mine)** |
+| 14 | **MED** | latency vs DESIGN §11 | Under the 6-worker bulk load, `GET /api/v1/metrics` reports **p50 324 ms, p95 ~450 ms, p99 ~590 ms** against DESIGN §11's < 200 ms budget. This is the *loaded* figure, and `latency_ms` measures scoring + graph + persist only (the case embedding is a BackgroundTask and is outside it, but still competes for the same threadpool). | Measure the idle single-request figure and publish **both**, rather than quoting whichever one flatters. If the loaded figure is the one that matters for the demo, either move embedding off the request path or restate the budget. | **Lane A** |
+| 15 | LOW | `backend/app/api/v1/stream.py:36` | `GET /api/v1/stream` declares `response_model=None`, so strictly it is the one route without a response model (invariant 4). | Accepted and documented rather than worked around: a `StreamingResponse` has no single response model. The payloads *are* Pydantic — `DecisionResponse.model_dump_json` and `DriftEventOut.model_dump_json` — and `responses=_SSE_DOC` publishes the schema in OpenAPI. Substantive compliance. | accepted |
+| 16 | LOW | `backend/app/services/replay.py:39` | `fraud_wave_rows` builds the simulated wave by sampling the variant file's **real fraud rows with replacement**, so the same fraud row recurs during a long replay. Harmless for drift (ADWIN sees the score/error stream) but it means the wave is resampled real rows, not fresh ones. | Disclose in the README alongside the `REPLAY_SHIFT_FRAUD_RATE` note. | **README (R3)** |
+
+## 1b.3 — Checked and clean
+
+These were the places a defect would have been expensive, so they were checked specifically:
+
+- **Graph SQL injection (A4).** Every statement in `repositories/graph_repo.py` is either SQLAlchemy
+  Core or a `text()` with bound parameters — including the recursive CTE, where `:fanout`, `:row_cap`
+  and `:node_limit` are bound, not interpolated. No f-string reaches SQL.
+- **Lock ordering (A4).** `upsert_entities` documents that `keys` must be sorted so concurrent
+  requests touching the same entities lock in the same order. `entity_keys` does return
+  `sorted(keys)` — the contract is actually honoured, not merely stated. The 40k concurrent load
+  exercised this path with six writers and produced no deadlock.
+- **The drift demo cannot contaminate the entity graph.** Replay rows are validated without
+  `history`, so `ApplicationEvent.label()` returns `None` and no replay row can set `fraud_flag` on
+  an entity. The simulated fraud wave therefore cannot manufacture confirmed-fraud graph signals —
+  which would have quietly inflated the graph uplift during the drift demo.
+- **Identifiers still never surface.** Graph nodes are labelled `"<type> <hash prefix>"`
+  (`graph_service.py`), applications by `external_ref`. No raw identifier is exposed by the graph API.
+- **Drift threshold changes are auditable.** Every ADWIN detection writes a `drift_events` row *and*
+  an `audit_log` entry with old and new thresholds, including when the tightening cap is reached and
+  the thresholds deliberately do not move (`tightened: false`).
+- **Rate limiting keys per authenticated user**, falling back to client IP. Keying on IP alone would
+  have let this bulk load starve the analyst console, since everything here shares one IP.
+- **CORS** is an explicit allowlist with `allow_credentials=False` (bearer tokens, no cookies).
+
+## 1b.4 — For Lane A
+
+1. **Finding 14 — latency.** Publish an idle p50/p95 alongside the under-load numbers. Do not quote
+   the idle figure alone against DESIGN §11.
+2. Nothing else. A4–A6 introduced no HIGH or MEDIUM defect in Lane A's own code; findings 12 and 13
+   are both mine and both fixed.
