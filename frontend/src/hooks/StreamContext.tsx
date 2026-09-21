@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, streamUrl } from "../api/client";
-import { type Band, type DecisionResponse, type DriftEvent, type StreamStatus } from "../api/types";
+import { type Band, type DecisionResponse, type DriftEvent, type MetricsResponse, type StreamStatus } from "../api/types";
 import { percentile } from "../lib/format";
 
 const MAX_ROWS = 400;
@@ -13,6 +13,7 @@ const MAX_BUCKETS = 72; // 6 minutes
 export type Connection = "connecting" | "live" | "reconnecting";
 export type BandCounts = Record<Band, number>;
 export interface Bucket { t: number; counts: BandCounts }
+export interface MetricsSample { t: number; p50: number; p95: number; p99: number }
 export interface LatencyStats { p50: number; p95: number; p99: number; last: number; n: number }
 
 interface StreamValue {
@@ -28,6 +29,8 @@ interface StreamValue {
   latency: LatencyStats | null;
   buckets: Bucket[];
   driftEvents: DriftEvent[];
+  metrics: MetricsResponse | null;
+  metricsHistory: MetricsSample[];
 }
 
 const emptyCounts = (): BandCounts => ({ APPROVE: 0, STEP_UP: 0, REVIEW: 0, DECLINE: 0 });
@@ -44,6 +47,8 @@ export function StreamProvider({ token, children }: { token: string; children: R
   const [latency, setLatency] = useState<LatencyStats | null>(null);
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [driftEvents, setDriftEvents] = useState<DriftEvent[]>([]);
+  const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
+  const [metricsHistory, setMetricsHistory] = useState<MetricsSample[]>([]);
 
   // Decisions arrive at ~30/s. Buffer them and flush a few times a second so React renders at a human pace.
   const buffer = useRef<DecisionResponse[]>([]);
@@ -68,6 +73,20 @@ export function StreamProvider({ token, children }: { token: string; children: R
     const t = window.setInterval(() => void refreshStatus(), 4000);
     return () => window.clearInterval(t);
   }, [refreshStatus]);
+
+  // Server-side latency percentiles over its rolling window; kept here so the history survives page changes.
+  useEffect(() => {
+    let cancelled = false;
+    const poll = () =>
+      api.metrics().then((m) => {
+        if (cancelled) return;
+        setMetrics(m);
+        setMetricsHistory((h) => [...h, { t: Date.now(), p50: m.p50, p95: m.p95, p99: m.p99 }].slice(-120));
+      }).catch(() => {});
+    poll();
+    const t = window.setInterval(poll, 3000);
+    return () => { cancelled = true; window.clearInterval(t); };
+  }, []);
 
   // Seed the table with recent decisions so the screen is not blank while the replay is stopped.
   useEffect(() => {
@@ -156,8 +175,8 @@ export function StreamProvider({ token, children }: { token: string; children: R
   }, [token]);
 
   const value = useMemo<StreamValue>(
-    () => ({ connection, status, refreshStatus, setStatus, decisions, fresh, counts, total, ratePerSec, latency, buckets, driftEvents }),
-    [connection, status, refreshStatus, decisions, fresh, counts, total, ratePerSec, latency, buckets, driftEvents],
+    () => ({ connection, status, refreshStatus, setStatus, decisions, fresh, counts, total, ratePerSec, latency, buckets, driftEvents, metrics, metricsHistory }),
+    [connection, status, refreshStatus, decisions, fresh, counts, total, ratePerSec, latency, buckets, driftEvents, metrics, metricsHistory],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
