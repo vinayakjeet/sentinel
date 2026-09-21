@@ -145,17 +145,20 @@ def test_replay_pass_identifiers_are_isolated_from_history_and_other_passes(payl
     assert not keys(pass_a) & keys(pass_b)
 
 
-def test_starting_the_replay_clears_the_detector_window(client):
-    """A stale window from the previous run must not be compared with the new run's first events."""
-    monitor = client.app.state.services.drift.monitor
+def test_starting_the_replay_clears_the_detector_window(client, monkeypatch):
+    """A stale window from the previous run must not be compared with the new run's first events.
+
+    The replay itself is stubbed: data/replay/*.csv is gitignored, so it does not exist on a CI runner.
+    """
+    services = client.app.state.services
+
+    async def fake_start():
+        return services.replay.status()
+
+    monkeypatch.setattr(services.replay, "start", fake_start)
     for _ in range(50):
-        monitor.observe(0.9)
-    assert monitor.events_seen >= 50
-    try:
-        assert client.post("/api/v1/stream/start").status_code == 200
-        client.post("/api/v1/stream/stop")
-        # 50 stale events are gone; the run itself may have observed a handful before it was stopped
-        assert monitor.events_seen < 50
-    finally:
-        client.post("/api/v1/stream/stop")
-        client.post("/api/v1/metrics/drift/reset")
+        services.drift.monitor.observe(0.9)
+    assert services.drift.monitor.events_seen >= 50
+
+    assert client.post("/api/v1/stream/start").status_code == 200
+    assert services.drift.monitor.events_seen == 0
