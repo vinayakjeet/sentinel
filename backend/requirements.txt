@@ -1,0 +1,12 @@
+# Web / DB
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.4
+pydantic-settings==2.9.1
+SQLAlchemy==2.0.40
+psycopg[binary]==3.2.7
+alembic==1.15.2
+
+# Tests (run inside the api container)
+pytest==8.3.5
+httpx==0.28.1
