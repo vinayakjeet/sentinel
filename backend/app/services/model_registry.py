@@ -21,6 +21,7 @@ import yaml
 
 from app.schemas.application import ApplicationEvent
 from app.schemas.decision import ReasonCode
+from app.services.fast_iforest import FastIsolationForest
 from app.services.scoring import ModelScore
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,19 @@ class ModelScoringService:
         self.model_version = f"lgbm-if-{artifacts.version}"
         self._booster = getattr(artifacts.model, "booster_", artifacts.model)
         self._explainer = self._make_explainer()
+        self._if_columns = list(getattr(artifacts.iforest, "feature_names_in_", []))
+        self._fast_if = self._make_fast_iforest()
+
+    def _make_fast_iforest(self) -> FastIsolationForest | None:
+        try:
+            fast = FastIsolationForest(self.art.iforest)
+            if fast.verified_against(self.art.iforest, self.art.iforest.n_features_in_):
+                logger.info("fast IsolationForest path verified against sklearn")
+                return fast
+            logger.warning("fast IsolationForest path disagrees with sklearn; using sklearn")
+        except Exception:
+            logger.warning("fast IsolationForest path unavailable; using sklearn", exc_info=True)
+        return None
 
     def _make_explainer(self):
         try:
@@ -121,7 +135,11 @@ class ModelScoringService:
         cat_cols = [c for c in Xi.columns if isinstance(Xi[c].dtype, pd.CategoricalDtype)]
         if cat_cols:
             Xi = Xi.assign(**{c: Xi[c].cat.codes for c in cat_cols})
-        raw = -float(self.art.iforest.score_samples(Xi)[0])  # higher = more anomalous
+        if self._fast_if is not None:
+            row = (Xi[self._if_columns] if self._if_columns else Xi).to_numpy(dtype=np.float64)[0]
+            raw = -self._fast_if.score_samples_row(row)  # higher = more anomalous
+        else:
+            raw = -float(self.art.iforest.score_samples(Xi)[0])
         span = self.art.if_max - self.art.if_min
         return float(np.clip((raw - self.art.if_min) / span, 0.0, 1.0)) if span > 0 else 0.0
 

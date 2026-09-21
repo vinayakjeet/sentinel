@@ -43,9 +43,10 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
 ## Current status
 - Lane A: GATE 1 passed 16:25 (A3 done). Real model lgbm-if-v1 + SHAP top-4 reasons live; docs/openapi.json FROZEN (18 routes).
   API http://localhost:8000 (/docs), Postgres localhost:5432 (creds in .env). Live: /auth/login, /decisions/*, /adverse-action,
-  /cases/{id}/similar, /copilot/ask (Lane B routers wired + embed hook). A4 DONE 17:05: entity graph + uplift live,
-  GET /entities/{application_id}/graph. Lane B: B4 load can run now. 501 until built: /stream*, /metrics* (A5).
-  SSE auth: GET /stream?token=<jwt>. R1 handover items 1, 3, 4 done; item 2 (auth) = A6. Next: A5 stream + drift.
+  /cases/{id}/similar, /copilot/ask (Lane B routers wired + embed hook). A4 DONE 17:05: entity graph + uplift live.
+  GATE 2 passed 18:25 (A5): POST /stream/start → /stream/switch?source=shift → drift in ~9 s, bands 300/650/850 → 225/575/775.
+  All 18 routes live. SSE: GET /stream?token=<jwt> (event: decision | drift). Shift source = variant rows with a SIMULATED
+  fraud wave (12% fraud, REPLAY_SHIFT_FRAUD_RATE) — README must disclose. Next: A6 auth enforcement (R1 item 2).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
 - Lane B: R1 audit done (docs/audit-R1.md). gitleaks CLEAN on history. Fixed 3 in my lane incl. a HIGH that crashed Lane A startup (features.json key). LANE A MUST DO: requirements pins, A6 auth enforcement, router wiring, alembic/env.py import.
 - Lane F: not started

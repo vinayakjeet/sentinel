@@ -101,3 +101,16 @@ def test_riskier_application_scores_higher(scorer, payload):
         {**payload, "velocity_6h": 14500.0, "name_email_similarity": 0.01, "credit_risk_score": 340}
     )
     assert scorer.score(risky).p_model > scorer.score(safe).p_model
+
+
+def test_fast_iforest_matches_sklearn(artifacts_dir):
+    from app.services.fast_iforest import FastIsolationForest
+
+    forest = joblib.load(artifacts_dir / "iforest_v1.pkl")["model"]
+    fast = FastIsolationForest(forest)
+    X = np.random.default_rng(3).normal(0, 1000, (300, forest.n_features_in_))
+    np.testing.assert_allclose([fast.score_samples_row(r) for r in X], forest.score_samples(X), rtol=1e-12)
+
+
+def test_scorer_uses_verified_fast_iforest(scorer):
+    assert scorer._fast_if is not None

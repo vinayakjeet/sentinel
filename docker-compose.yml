@@ -23,6 +23,11 @@ services:
       POSTGRES_PORT: "5432"
       ARTIFACTS_DIR: /opt/sentinel/ml/artifacts
       REPLAY_DIR: /opt/sentinel/data/replay
+      # Single-row inference: one OpenMP thread per call is fastest, and concurrent requests/replay workers
+      # supply the parallelism. Unpinned, LightGBM + torch each spawn a team per call and oversubscribe the CPU.
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
     ports:
       - "8000:8000"
     volumes:
