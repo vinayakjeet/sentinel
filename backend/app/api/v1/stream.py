@@ -1,7 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,7 @@ from app.core.security import Principal, get_current_user, get_current_user_sse,
 from app.db.session import get_db
 from app.repositories import audit_repo
 from app.schemas.stream import StreamSource, StreamStatus
+from app.services.broadcaster import TooManySubscribers
 from app.services.container import Services, get_services
 
 router = APIRouter(prefix="/stream", tags=["stream"])
@@ -43,7 +44,10 @@ async def stream_decisions(
     user: Principal = Depends(get_current_user_sse),
     services: Services = Depends(get_services),
 ):
-    queue = services.broadcaster.subscribe()
+    try:
+        queue = services.broadcaster.subscribe()
+    except TooManySubscribers:
+        raise HTTPException(status_code=429, detail="too many live-feed connections") from None
 
     async def events() -> AsyncIterator[str]:
         try:

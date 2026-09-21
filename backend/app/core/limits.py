@@ -3,6 +3,7 @@
 import json
 
 from slowapi import Limiter
+from slowapi.middleware import SlowAPIASGIMiddleware
 from slowapi.util import get_remote_address
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
@@ -29,6 +30,23 @@ limiter = Limiter(key_func=rate_key, default_limits=[_settings.rate_limit_defaul
 LOGIN_LIMIT = _settings.rate_limit_login
 DECISIONS_LIMIT = _settings.rate_limit_decisions
 login_key = get_remote_address
+
+
+class StreamSafeSlowAPIMiddleware(SlowAPIASGIMiddleware):
+    """SlowAPIASGIMiddleware, except it stays out of the way of the SSE route.
+
+    slowapi wraps `send` to inject X-RateLimit-* headers and re-sends its buffered `http.response.start` on the
+    first body chunk, which uvicorn rejects on a streaming response ("Expected ASGI message 'http.response.body',
+    but got 'http.response.start'"). The client sees the stream close right after the first frame. The stream is
+    one long-lived request per subscriber, so per-request limiting adds nothing; concurrent subscribers are
+    capped in the Broadcaster instead.
+    """
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope["path"].endswith("/stream"):
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
 
 
 class BodyTooLarge(Exception):

@@ -5,6 +5,11 @@ import threading
 logger = logging.getLogger(__name__)
 
 QUEUE_SIZE = 500
+MAX_SUBSCRIBERS = 50
+
+
+class TooManySubscribers(Exception):
+    pass
 
 
 class Broadcaster:
@@ -29,6 +34,8 @@ class Broadcaster:
     def subscribe(self) -> asyncio.Queue[tuple[str, str]]:
         q: asyncio.Queue[tuple[str, str]] = asyncio.Queue(maxsize=QUEUE_SIZE)
         with self._lock:
+            if len(self._subscribers) >= MAX_SUBSCRIBERS:
+                raise TooManySubscribers
             self._subscribers.add(q)
         return q
 
