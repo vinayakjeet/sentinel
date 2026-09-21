@@ -327,8 +327,9 @@ Secret scanning is clean: gitleaks 8.30.1 over all commits in history, no leaks 
 - **The fairness result is a fail, not a caveat.** See §5 and `docs/responsible-ai.md`.
 - **Identifiers and rings are synthetic** (§6.1). The graph machinery is real; the rings are planted.
 - **Latency under bulk load exceeds the design budget.** DESIGN §11 targets p99 < 200 ms. Under a
-  six-worker bulk load the API measures p50 ≈ 324 ms / p95 ≈ 450 ms. Single-request latency is lower;
-  both figures belong in the same sentence, so neither is quoted alone.
+  six-worker bulk load the API measures p50 ≈ 324 ms / p95 ≈ 450 ms / p99 ≈ 590 ms, taken from
+  `GET /api/v1/metrics` during a 40,000-row load. The idle single-request figure is measured
+  separately in §5 of `docs/audit-R1.md`; whichever is quoted, it is said which one it is.
 - **One machine, one process.** No horizontal scaling, no model registry, no feature store, no
   retraining pipeline. `docs/aws-target-architecture.md` describes the production shape and is honest
   about which parts are not free.

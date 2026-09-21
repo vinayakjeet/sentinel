@@ -48,6 +48,19 @@ credit, and it says so in `docs/model-card.md` §1.
   `backend/tests/test_semantic_narrative.py::test_narrative_carries_no_personal_data` asserts it.
 * **Nothing personal reaches the LLM provider.** Analyst questions are PII-redacted before the call
   (Presidio where installed, regex otherwise) — see §5.
+* **The demo database is a subset, and the drift demo is amplified.** Two further places where the
+  demo is not the thing itself, stated here so they are not discovered later:
+  * The loaded demo database holds **40,000** of the 150,000-row demo sample (plus every planted
+    ring member). Every metric quoted in §4 and in `docs/model-card.md` comes from the full
+    205,011-row test set, never from this subset.
+  * The drift demo replays **real BAF Variant II rows**, but with fraud prevalence raised to about
+    **12%** (`REPLAY_SHIFT_FRAUD_RATE`) against roughly 1% naturally — the fraud rows are resampled
+    with replacement from the variant file's own fraud rows, not fabricated. A realistic 1% wave
+    needs tens of thousands of events before ADWIN can call it, which is not a live demo. The
+    detector, the delayed-label error stream and the tightening logic are unmodified; only the
+    arrival rate of fraud is amplified. Setting `REPLAY_SHIFT_FRAUD_RATE=0` replays the file as-is.
+  * Replayed rows are validated **without** `history`, so no replayed row can set `fraud_flag` on an
+    entity. The simulated wave cannot manufacture confirmed-fraud signals in the entity graph.
 
 ## 3. Protected attributes
 
