@@ -25,7 +25,7 @@ def get_drift(
     return services.drift.status(db)
 
 
-@router.post("/drift/reset", response_model=DriftStatus, summary="Reset thresholds and detectors (admin)")
+@router.post("/drift/reset", response_model=DriftStatus, summary="Reset thresholds (admin)")
 def reset_drift(
     user: Principal = Depends(require_admin),
     services: Services = Depends(get_services),

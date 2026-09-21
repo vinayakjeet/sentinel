@@ -46,7 +46,11 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
   /cases/{id}/similar, /copilot/ask (Lane B routers wired + embed hook). A4 DONE 17:05: entity graph + uplift live.
   GATE 2 passed 18:25 (A5): POST /stream/start → /stream/switch?source=shift → drift in ~9 s, bands 300/650/850 → 225/575/775.
   All 18 routes live. SSE: GET /stream?token=<jwt> (event: decision | drift). Shift source = variant rows with a SIMULATED
-  fraud wave (12% fraud, REPLAY_SHIFT_FRAUD_RATE) — README must disclose. Next: A6 auth enforcement (R1 item 2).
+  fraud wave (12% fraud, REPLAY_SHIFT_FRAUD_RATE) — README must disclose.
+  A6 DONE 18:55: AUTH ENFORCED. Every route except /health /ready /docs /auth/login needs `Authorization: Bearer <jwt>`
+  (SSE: ?token=). Analyst = read; admin = + /stream/start|stop|switch, /metrics/drift/reset. Tokens last 60 min: long
+  loads must re-login on 401. Rate limits per user: 600/min default, 3000/min POST /decisions/application, login 10/min/IP.
+  CORS allows http://localhost:5173. R1 handover items 1-4 all done. Next: A7 (Lane F integration).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
 - Lane B: R1 audit done (docs/audit-R1.md). gitleaks CLEAN on history. Fixed 3 in my lane incl. a HIGH that crashed Lane A startup (features.json key). LANE A MUST DO: requirements pins, A6 auth enforcement, router wiring, alembic/env.py import.
 - Lane F: not started

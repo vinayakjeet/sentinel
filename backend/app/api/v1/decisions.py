@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.limits import DECISIONS_LIMIT, limiter
 from app.core.security import Principal, get_current_user
 from app.db.session import get_db
 from app.repositories import decision_repo
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/decisions", tags=["decisions"])
     status_code=status.HTTP_201_CREATED,
     summary="Score a credit application and persist the decision",
 )
+@limiter.limit(DECISIONS_LIMIT)
 def decide_application(
     event: ApplicationEvent,
     request: Request,

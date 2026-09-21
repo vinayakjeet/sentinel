@@ -4,11 +4,14 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from slowapi.middleware import SlowAPIASGIMiddleware
 
 from app.api.health import router as health_router
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
+from app.core.limits import BodySizeLimitMiddleware, limiter
 from app.core.logging import setup_logging
 from app.core.middleware import RequestIdMiddleware
 from app.services.container import build_services
@@ -46,6 +49,21 @@ def create_app() -> FastAPI:
         description="Real-time application fraud detection for digital lending.",
         version="1.0.0",
         lifespan=lifespan,
+    )
+    # add_middleware wraps: the last added is outermost. Effective order, outer -> inner:
+    # RequestId (every line/response gets an id) -> CORS (so 413/429 stay readable by the browser)
+    # -> body-size cap -> rate limiter -> routes.
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIASGIMiddleware)
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_body_bytes)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=False,  # bearer tokens, no cookies
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        expose_headers=["X-Request-ID"],
+        max_age=600,
     )
     app.add_middleware(RequestIdMiddleware)
     register_error_handlers(app)

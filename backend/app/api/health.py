@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, Response, status
 from sqlalchemy import text
 
+from app.core.limits import limiter
 from app.db.session import engine
 from app.schemas.health import HealthResponse, ReadyResponse
 
@@ -11,6 +12,7 @@ router = APIRouter(tags=["ops"])
 
 
 @router.get("/health", response_model=HealthResponse)
+@limiter.exempt
 def health() -> HealthResponse:
     return HealthResponse(status="ok")
 
@@ -20,6 +22,7 @@ def health() -> HealthResponse:
     response_model=ReadyResponse,
     responses={503: {"model": ReadyResponse, "description": "Database unreachable"}},
 )
+@limiter.exempt
 def ready(response: Response) -> ReadyResponse:
     try:
         with engine.connect() as conn:

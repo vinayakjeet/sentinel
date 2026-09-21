@@ -62,8 +62,9 @@ class Settings(BaseSettings):
     demo_admin_username: str | None = None
     demo_admin_password: SecretStr | None = None
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
-    rate_limit_default: str = "120/minute"
+    rate_limit_default: str = "600/minute"
     rate_limit_login: str = "10/minute"
+    rate_limit_decisions: str = "3000/minute"
     max_body_bytes: int = 64 * 1024
 
     @computed_field  # type: ignore[prop-decorator]

@@ -47,12 +47,43 @@ def _migrated_db():
     yield
 
 
+def _token(role: str) -> str:
+    from app.core.security import Principal, create_access_token
+
+    s = get_settings()
+    username = s.demo_admin_username if role == "admin" else s.demo_analyst_username
+    return create_access_token(Principal(username=username, role=role))[0]
+
+
 @pytest.fixture(scope="session")
 def client():
+    """Authenticated as admin (most tests exercise behaviour, not auth)."""
     from app.main import app
 
-    with TestClient(app) as c:  # context manager runs the lifespan (builds services)
+    with TestClient(app, headers={"Authorization": f"Bearer {_token('admin')}"}) as c:  # runs the lifespan
         yield c
+
+
+@pytest.fixture(scope="session")
+def anon(client):
+    from app.main import app
+
+    return TestClient(app)  # lifespan already ran via `client`
+
+
+@pytest.fixture(scope="session")
+def analyst(client):
+    from app.main import app
+
+    return TestClient(app, headers={"Authorization": f"Bearer {_token('analyst')}"})
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits():
+    from app.core.limits import limiter
+
+    limiter.reset()
+    yield
 
 
 @pytest.fixture

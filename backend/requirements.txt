@@ -15,6 +15,7 @@ ruff==0.11.8
 # Security
 python-jose[cryptography]==3.4.0
 bcrypt==4.3.0
+slowapi==0.1.9
 
 # ML runtime. Copied VERBATIM from ml/requirements.txt: artifacts are pickled by Lane B on these versions.
 # --- [artifact-critical] — must match backend/requirements.txt exactly -------------------------

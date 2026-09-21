@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.limits import LOGIN_LIMIT, limiter, login_key
 from app.core.security import authenticate, create_access_token
 from app.db.session import get_db
 from app.repositories import audit_repo
@@ -11,7 +12,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenResponse, responses={401: {"model": ErrorResponse}})
-def login(body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
+@limiter.limit(LOGIN_LIMIT, key_func=login_key)
+def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse:
     principal = authenticate(body.username, body.password.get_secret_value())
     audit_repo.write(
         db,

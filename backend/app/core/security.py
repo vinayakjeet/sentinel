@@ -4,7 +4,7 @@ from functools import lru_cache
 from typing import Literal
 
 import bcrypt
-from fastapi import Depends, Query
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel
@@ -84,29 +84,35 @@ def decode_token(token: str) -> Principal | None:
         return None
 
 
+def _unauthorized(detail: str) -> HTTPException:
+    return HTTPException(status.HTTP_401_UNAUTHORIZED, detail, headers={"WWW-Authenticate": "Bearer"})
+
+
+def _principal_from(token: str | None) -> Principal:
+    if not token:
+        raise _unauthorized("not authenticated")
+    principal = decode_token(token)
+    if principal is None:
+        raise _unauthorized("invalid or expired token")
+    return principal
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> Principal:
-    # A6 turns this into enforcement (401 on missing/invalid token). Until then a valid token is honoured
-    # for attribution and anything else passes as an anonymous admin.
-    if credentials:
-        principal = decode_token(credentials.credentials)
-        if principal:
-            return principal
-    return Principal(username="anonymous", role="admin")
+    """401 unless a valid, unexpired JWT is presented as `Authorization: Bearer <token>`."""
+    return _principal_from(credentials.credentials if credentials else None)
 
 
 def get_current_user_sse(
     token: str | None = Query(None, description="JWT; EventSource cannot send an Authorization header"),
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> Principal:
-    if token and not credentials:
-        principal = decode_token(token)
-        if principal:
-            return principal
-    return get_current_user(credentials)
+    """Same as get_current_user, but also accepts ?token= because browsers' EventSource cannot set headers."""
+    return _principal_from(credentials.credentials if credentials else token)
 
 
 def require_admin(user: Principal = Depends(get_current_user)) -> Principal:
-    # A6: 403 unless user.role == "admin".
+    if user.role != "admin":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "admin role required")
     return user
