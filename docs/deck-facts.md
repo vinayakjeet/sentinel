@@ -136,12 +136,13 @@ Caveats to say out loud: the shifted stream is a simulated 12% fraud wave; detec
 | condition | p50 | p95 | p99 |
 |---|---|---|---|
 | idle, 30 sequential requests | 38.1 ms | 40.8 ms | max 124.1 ms (30 samples: p99 = max) |
-| quoted on camera (presenter's figure, "at 26 events/sec") | 38 ms | n/a | 124 ms. The 124 ms in the repo's logs is the max of the idle sequential run above; there is no logged 26 events/sec run |
+| live, Model health screen, replay running (observed ~21:22 IST during QA) | 68 ms | 111 ms | 135 ms at ~17 decisions/s |
+| quoted on camera | n/a | n/a | **whatever the Model health screen shows at recording time**, with its events/sec. No fixed figure is quoted. |
 | idle, client-observed wall time | 46.4 ms | n/a | n/a |
 | under 6-worker bulk load, 40,000 rows, ~15 req/s | 278.6 ms | 449.8 ms | 577.2 ms |
 | DESIGN §11 budget | n/a | n/a | < 200 ms |
 
-The budget holds for a single request and does not hold under the bulk load. Say both. Source: `docs/audit-R1.md` §1b.5. Not measured: `/metrics` p99 with the replay stream running at 30/s. Read it on the Model health screen before quoting it (it reads 0 while the stream is stopped).
+The budget holds for a single request and does not hold under the bulk load. Say both. Source: `docs/audit-R1.md` §1b.5. The live figure (`/metrics`, rolling window of 1,000) depends on the replay rate; read it off the Model health screen at recording time (it reads 0 while the stream is stopped).
 
 ## 9. Similar cases (semantic layer)
 

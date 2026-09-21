@@ -65,9 +65,10 @@ in pgvector, and an LLM that can only read. Everything you'll see runs from one 
 **Say:** "Every row is a real application going through validation, entity resolution, scoring and persistence.
 Coloured by band: approve, step-up, review, decline. It's four outcomes, not two: step-up asks for more evidence instead of
 declining a good customer."
-**Latency line: say what the screen shows.** Quote: **"38 ms p50 idle, p99 124 ms at 26 events/sec."** The loaded numbers
-(279 ms p50 / 577 ms p99 under a six-worker bulk load) stay in the README and `docs/deck-facts.md` §8; don't volunteer them
-on camera, but don't contradict them if asked. If the on-screen p99 differs from 124 ms, say the on-screen number.
+**Latency line: quote what the Model health screen shows at recording time.** Read the p99 and the events/sec off the screen and
+say them ("p99 about N ms at M events a second"). When this script was written that was about 135 ms at 17 events/s. Idle,
+single-request p50 was 38 ms. The loaded numbers (279 ms p50 / 577 ms p99 under a six-worker bulk load) stay in the README and
+`docs/deck-facts.md` §8; don't volunteer them on camera, but don't contradict them if asked.
 
 *If the feed shows "Reconnecting…": the SSE token expired (60 min). Sign out, sign in, Start replay again.*
 
