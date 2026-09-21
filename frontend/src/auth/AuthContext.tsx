@@ -41,12 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setNotice(msg ?? null);
   }, []);
 
-  useEffect(() => {
-    configureApi({
-      getToken: () => tokenRef.current,
-      onUnauthorized: () => { if (tokenRef.current) logout(EXPIRED); },
-    });
-  }, [logout]);
+  // Registered during render, not in an effect: child effects run before their parent's, so an effect here would
+  // let the first requests after a reload go out without a token, come back 401, and log the user out.
+  // Idempotent (it only swaps two closures over refs), so re-running it on every render is harmless.
+  configureApi({
+    getToken: () => tokenRef.current,
+    onUnauthorized: () => { if (tokenRef.current) logout(EXPIRED); },
+  });
 
   // Tokens last 60 minutes; sign out at expiry instead of waiting for the first 401.
   useEffect(() => {
