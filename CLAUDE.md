@@ -41,7 +41,8 @@ B6 guardrails/LLM invariant, R1 audit, or a bug that survived 2 fix attempts. As
 One line: "Switch to Opus for <task> — <reason>." Then wait.
 
 ## Current status
-- Lane A: A1 done 13:15 — compose up (db+api healthy), http://localhost:8000/ready 200 from Windows, Postgres on localhost:5432 (creds in .env). Next: A2 decisions API.
+- Lane A: A2 done 13:20. API http://localhost:8000 (/docs), Postgres localhost:5432 (creds in .env). POST /api/v1/decisions/application live
+  (stub score 0.5 → STEP_UP), GET /decisions/{id}, GET /decisions?band=. Sample payload: backend/tests/fixtures/application.json. Next: A3a contract stubs, A3 scoring.
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
 - Lane B: not started
 - Lane F: not started
