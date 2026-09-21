@@ -46,5 +46,5 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
   /adverse-action. Other routes return 501 until built. SSE auth: GET /stream?token=<jwt>. Lane B: use app/schemas/cases.py + copilot.py
   in your routers (don't redefine). Sample payload: backend/tests/fixtures/application.json. Next: A3 real scoring (waiting on ml/).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
-- Lane B: B3 done (reason-code tests 9 pass, fairness measured, model card). Artifacts live since 15:00. Next: B5 semantic layer.
+- Lane B: B5 semantic layer written (embedder, narrative, migration 0003, router, backfill); awaiting Postgres to verify. ACTION: backend/requirements.txt ML pins are stale - see docs/PLAN-B.md section 3.
 - Lane F: not started

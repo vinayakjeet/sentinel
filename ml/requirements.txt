@@ -45,8 +45,14 @@ matplotlib==3.11.2       # docs/charts/*.png
 httpx==0.28.1            # ml/scripts/load_demo_db.py posts through the API
 pytest==9.1.1
 
-# Semantic layer (DESIGN §8). These DO belong in the api image — exact pins follow once resolved;
-# see docs/PLAN-B.md §3. torch must come from the CPU wheel index in the image, or it pulls ~2 GB of CUDA:
-#   pip install --index-url https://download.pytorch.org/whl/cpu torch
-# sentence-transformers
-# torch
+# --- [semantic] — DESIGN §8. These DO belong in the api image ---------------------------------
+# torch must come from the CPU wheel index inside the image, or it pulls ~2 GB of CUDA packages:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.0
+sentence-transformers==6.1.0
+torch==2.14.0
+transformers==5.17.0
+# --- end [semantic] ---------------------------------------------------------------------------
+
+# Note: the semantic layer needs NO pgvector python package. app/semantic/models.py defines a
+# 30-line UserDefinedType and the repository uses raw SQL, so the image stays one dependency
+# lighter and pgvector's text wire format does the rest.
