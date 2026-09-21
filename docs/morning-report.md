@@ -98,4 +98,13 @@ The API contract did not change (`docs/openapi.json` untouched, `test_contract` 
 
 ## 6. Commit and CI
 
-See the last section of this file (filled in after the push).
+- Commits on `main`: `354147b` (the fixes, docs, screenshots, report), `6a91894` (test fix, below). Pulled with `--rebase` (nothing to rebase), pushed.
+  The push also carried 8 earlier local commits that had never been pushed (F1/F2 frontend, hero swap, centering).
+- **CI run 35661285879 on `354147b` failed**, honestly: my new detector-reset test started the real replay, and `data/replay/*.csv` is gitignored so it does
+  not exist on the runner (`FileNotFoundError`, which also leaked an error into a later test). Fixed in `6a91894` by stubbing the replay in that test; I
+  re-ran the whole suite locally with `REPLAY_DIR=/nonexistent` to reproduce CI's condition first (133 passed).
+- **CI run 35661641321 on `6a91894`: green**, all four jobs: gitleaks, ruff, backend tests (postgres + pgvector), ml tests.
+  https://github.com/vinayakjeet/sentinel/actions/runs/35661641321
+- Git note: `git push` hung on this machine's Git Credential Manager (waits for a GUI prompt that never appears in a headless session). I pushed with the
+  `gh` CLI's stored token instead (`git -c credential.helper= -c "credential.helper=!gh auth git-credential" push origin main`). If a plain `git push`
+  hangs for you, use that.

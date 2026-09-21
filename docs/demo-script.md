@@ -171,7 +171,7 @@ be reviewed at a lower score."
    `docker compose exec api python -m pytest tests -q`
    Expect all green (133 in the final QA pass). To show the one that matters:
    `docker compose exec api python -m pytest tests/test_llm_guardrails.py -q -k "cannot_mutate or injection_blocked"`.
-3. Browser: the repo's README on GitHub; point at the green **CI** badge (link: `.../actions/runs/35601969812`).
+3. Browser: the repo's README on GitHub; point at the green **CI** badge (latest green run: `.../actions/runs/35661641321`).
 
 **Say:** "`test_llm_cannot_mutate_decision` is the invariant test: it fails if the LLM layer can write a score or
 decision. CI runs gitleaks over the whole history, lint, and the tests against a real Postgres with pgvector."

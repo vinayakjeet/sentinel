@@ -8,8 +8,8 @@ Nothing is estimated. Where a number is unflattering it is listed anyway.
 | item | value |
 |---|---|
 | repo | https://github.com/vinayakjeet/sentinel |
-| CI, latest green run (`main`) | https://github.com/vinayakjeet/sentinel/actions/runs/35601969812 |
-| CI, earlier green runs | .../actions/runs/35601519343 , .../actions/runs/35599391251 |
+| CI, latest green run (`main`, 22 Sep, commit `6a91894`) | https://github.com/vinayakjeet/sentinel/actions/runs/35661641321 |
+| CI, earlier green runs | .../actions/runs/35601969812 , .../actions/runs/35601519343 , .../actions/runs/35599391251 |
 | CI jobs | gitleaks (full history) · ruff · backend tests (postgres + pgvector) · ml tests + cold artifact load |
 | model version | `lgbm-if-v1` (`ml/artifacts/metrics_v1.json`, generated 2026-09-21 09:36 UTC) |
 | API routes (frozen `docs/openapi.json`) | 18 |
@@ -177,7 +177,7 @@ Say: similarity finds cases that look alike; the graph finds cases that are conn
 |---|---|---|
 | backend tests in CI | 106 passing | CI run 35601969812, pytest progress dots |
 | ml tests | 9 passing (`test_reason_codes.py`) | CI + local |
-| backend tests, final QA pass (22 Sep) | 133 passing in the api container (`docker compose exec api python -m pytest tests`), incl. 5 semantic-centering, 16 new copilot-claim/graph-signal tests, replay-isolation and detector-reset tests | local; CI run pending, see morning report |
+| backend tests, final QA pass (22 Sep) | 133 passing (api container, and CI with the replay data absent) (`docker compose exec api python -m pytest tests`), incl. 5 semantic-centering, 16 new copilot-claim/graph-signal tests, replay-isolation and detector-reset tests | CI run 35661641321, green |
 | LLM-layer tests (audit R1) | 19 pass, incl. `test_llm_cannot_mutate_decision`, `test_injection_blocked`, `test_pii_redacted`, `test_fallback_when_llm_down` | `docs/audit-R1.md` |
 | secret scan | gitleaks 8.30.1, full history, no leaks | README §8 |
 | lint | `ruff check` clean on backend + ml; CI log shows "Would reformat" lines for the format check | CI log |
