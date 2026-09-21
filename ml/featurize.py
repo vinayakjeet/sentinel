@@ -152,6 +152,11 @@ def feature_metadata() -> dict[str, Any]:
     """The contents of ml/artifacts/features.json (written by train.py)."""
     return {
         "feature_order": list(FEATURE_ORDER),
+        # Alias. DESIGN §4 specifies "ordered list of model feature names" without naming the key,
+        # and Lane A's ModelRegistry reads feats["features"]. Publishing both spellings of the same
+        # list costs nothing and removes a KeyError at API startup; they must never diverge, which
+        # is why this is built from FEATURE_ORDER rather than written out separately.
+        "features": list(FEATURE_ORDER),
         "n_features": len(FEATURE_ORDER),
         "numeric": list(NUMERIC_FEATURES),
         "missing_flags": list(MISSING_FLAG_FEATURES),

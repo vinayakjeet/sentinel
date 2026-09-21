@@ -318,11 +318,14 @@ def main() -> int:
     if len(legit_idx) > IFOREST_FIT_ROWS:
         legit_idx = rng.choice(legit_idx, size=IFOREST_FIT_ROWS, replace=False)
     # IsolationForest needs numeric input; categoricals go in as their pinned category codes.
-    def to_numeric(frame: pd.DataFrame) -> np.ndarray:
+    # A DataFrame is returned rather than a bare array so the estimator records feature_names_in_.
+    # sklearn then validates the names on every predict, which turns a column-order mismatch in the
+    # serving path from a silently wrong anomaly score into a loud error.
+    def to_numeric(frame: pd.DataFrame) -> pd.DataFrame:
         out = frame.copy()
         for col in CATEGORICAL_FEATURES:
-            out[col] = out[col].cat.codes.astype("float64")
-        return out.to_numpy(dtype="float64")
+            out[col] = out[col].cat.codes
+        return out.astype("float64")
 
     iforest = IsolationForest(
         n_estimators=IFOREST_TREES, max_samples=256, contamination="auto",
@@ -377,7 +380,21 @@ def main() -> int:
         pickle.dump(model, fh, protocol=PICKLE_PROTOCOL)
     model.booster_.save_model(str(ARTIFACT_DIR / "model_v1.txt"))
     with open(ARTIFACT_DIR / "iforest_v1.pkl", "wb") as fh:
-        pickle.dump({"model": iforest, "min": a_min, "max": a_max}, fh, protocol=PICKLE_PROTOCOL)
+        pickle.dump(
+            {
+                "model": iforest,
+                "min": a_min,
+                "max": a_max,
+                # The IsolationForest was fitted on a numpy array in exactly this column order,
+                # with the four categoricals as pandas category codes. Publishing the order makes
+                # that contract explicit instead of leaving the caller to match it by accident -
+                # a mismatch here would not raise, it would just return wrong anomaly scores.
+                "features": list(FEATURE_ORDER),
+                "categorical_encoding": "pandas category codes, levels pinned in ml/featurize.CATEGORY_LEVELS",
+            },
+            fh,
+            protocol=PICKLE_PROTOCOL,
+        )
 
     preprocess = {
         "model_version": MODEL_VERSION,

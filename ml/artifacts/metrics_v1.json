@@ -1,6 +1,6 @@
 {
   "model_version": "v1",
-  "generated_at": "2026-09-21T09:05:18+00:00",
+  "generated_at": "2026-09-21T09:36:52+00:00",
   "data": {
     "train_rows": 794989,
     "test_rows": 205011,
@@ -68,7 +68,7 @@
   },
   "fairness": {
     "status": "measured",
-    "generated_at": "2026-09-21T09:05:40+00:00",
+    "generated_at": "2026-09-21T09:36:59+00:00",
     "evaluated_on": "test.parquet (months 6-7)",
     "score_used": "blended score, before graph uplift (uplift is applied in the backend)",
     "approve_threshold": 300,

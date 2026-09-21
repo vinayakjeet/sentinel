@@ -46,5 +46,5 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
   /adverse-action. Other routes return 501 until built. SSE auth: GET /stream?token=<jwt>. Lane B: use app/schemas/cases.py + copilot.py
   in your routers (don't redefine). Sample payload: backend/tests/fixtures/application.json. Next: A3 real scoring (waiting on ml/).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
-- Lane B: all unblocked work done (B0-B3,B5 code,B6,R2 CI,docs) + B4 loader written & payload-validated. WAITING on Lane A: :5432 + :8000 + A4 to run B4/B5v. ACTION: backend/requirements.txt ML pins stale.
+- Lane B: R1 audit done (docs/audit-R1.md). gitleaks CLEAN on history. Fixed 3 in my lane incl. a HIGH that crashed Lane A startup (features.json key). LANE A MUST DO: requirements pins, A6 auth enforcement, router wiring, alembic/env.py import.
 - Lane F: not started

@@ -230,6 +230,6 @@ fallback still get built and tested regardless — `test_fallback_when_llm_down`
 - [ ] B4 load demo DB + hero cases
 - [ ] B5v semantic verification (ring top-5)
 - [x] B6 LLM layer (Opus)
-- [ ] R1 audit (Opus)
+- [x] R1 audit (Opus) - docs/audit-R1.md; repeat after Lane A lands A4-A6
 - [x] R2 tests + CI (workflow written; needs a real run to call green)
 - [ ] R3 docs

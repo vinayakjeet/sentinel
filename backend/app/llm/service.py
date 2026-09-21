@@ -96,6 +96,13 @@ def _reason_universe() -> frozenset[str]:
                 return frozenset(str(k) for k in data)
         except Exception:  # pragma: no cover - never fail a request over this
             logger.warning("could not load reason code universe from %s", path)
+    # Reaching here means the foreign-reason check below degrades to a no-op. Citation filtering
+    # still holds, but a guardrail that quietly stops guarding is worse than one that is absent,
+    # so say so loudly rather than let it fail open in silence.
+    logger.error(
+        "reason code universe unavailable (looked in %s); the foreign-reason guardrail is INACTIVE",
+        [str(c) for c in candidates],
+    )
     return frozenset()
 
 

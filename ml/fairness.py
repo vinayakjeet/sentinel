@@ -82,8 +82,9 @@ def score_test_set() -> tuple[pd.DataFrame, np.ndarray]:
 
     Xn = X.copy()
     for col in CATEGORICAL_FEATURES:
-        Xn[col] = Xn[col].cat.codes.astype("float64")
-    anomaly = -ifo["model"].score_samples(Xn.to_numpy(dtype="float64"))
+        Xn[col] = Xn[col].cat.codes
+    # DataFrame, not ndarray: the forest was fitted with feature names, so sklearn checks them here.
+    anomaly = -ifo["model"].score_samples(Xn.astype("float64"))
     a_norm = np.clip((anomaly - ifo["min"]) / max(1e-12, ifo["max"] - ifo["min"]), 0.0, 1.0)
 
     p = np.clip(blend["w_supervised"] * p_lgbm + blend["w_anomaly"] * a_norm, 0.0, 1.0)
