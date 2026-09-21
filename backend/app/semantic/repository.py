@@ -96,6 +96,45 @@ def decisions_missing_embeddings(db: Session, limit: int = 1000) -> list[dict[st
     return [dict(r) for r in rows]
 
 
+def decisions_page_for_embedding(
+    db: Session, after_id: uuid.UUID | None, limit: int = 2000
+) -> list[dict[str, Any]]:
+    """Every decision, keyset-paged by id — the worklist for a full re-embed (mean refit)."""
+    rows = db.execute(
+        text(
+            """
+            SELECT id AS decision_id, band, decision, reason_codes, graph_signals, graph_uplift
+            FROM decisions
+            WHERE (CAST(:after_id AS uuid) IS NULL OR id > CAST(:after_id AS uuid))
+            ORDER BY id
+            LIMIT :limit
+            """
+        ),
+        {"after_id": str(after_id) if after_id else None, "limit": limit},
+    ).mappings().all()
+    return [dict(r) for r in rows]
+
+
+def uncentered_embeddings(
+    db: Session, mean_direction: Sequence[float], threshold: float = 0.6, limit: int = 5000
+) -> list[tuple[uuid.UUID, list[float]]]:
+    """Stored vectors that were written before centering existed (or by a process still running
+    the old code). Raw MiniLM vectors of this corpus sit at cosine ~0.90 to the mean direction and
+    centered ones at <0.3, so the split is unambiguous."""
+    rows = db.execute(
+        text(
+            """
+            SELECT decision_id, embedding::text AS embedding
+            FROM case_embeddings
+            WHERE 1 - (embedding <=> CAST(:mean_dir AS vector)) > :threshold
+            LIMIT :limit
+            """
+        ),
+        {"mean_dir": _to_pgvector(mean_direction), "threshold": threshold, "limit": limit},
+    ).all()
+    return [(r.decision_id, [float(x) for x in r.embedding.strip("[]").split(",")]) for r in rows]
+
+
 def load_decision_for_embedding(db: Session, decision_id: uuid.UUID) -> dict[str, Any] | None:
     row = db.execute(
         text(

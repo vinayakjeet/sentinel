@@ -109,6 +109,12 @@ def main() -> int:
                      "fraud_neighbours": 0, "same_band": 0}
         )
         detail: list[dict] = []
+        all_sims: list[list[float]] = []  # per query, neighbour similarities in rank order
+        band_matched_base: list[float] = []  # fraud rate of the query's own band, one per neighbour slot
+        fraud_by_band: dict[str, list[int]] = defaultdict(list)
+        for ref_, item_ in loaded.items():
+            if ref_ in fraud_by_ref:
+                fraud_by_band[item_["band"]].append(fraud_by_ref[ref_])
         for ref, item in sorted(ring_cases.items()):
             ring = ring_ref_to_ring[ref]
             stats = per_ring[ring]
@@ -130,6 +136,9 @@ def main() -> int:
                 stats["not_embedded"] += 1
                 continue
             stats["slots"] += len(neighbours)
+            all_sims.append([float(n["similarity"]) for n in neighbours])
+            band_rate = sum(fraud_by_band[item["band"]]) / max(1, len(fraud_by_band[item["band"]]))
+            band_matched_base.extend([band_rate] * len(neighbours))
             any_hits = sum(1 for n in neighbours if n["decision_id"] in ring_decision_ids)
             same_hits = sum(
                 1 for n in neighbours if ring_decision_ids.get(n["decision_id"]) == ring
@@ -192,6 +201,20 @@ def main() -> int:
         log(f"  neighbours in the same band         : {same_band} / {slots} "
             f"= {same_band / max(1, slots) * 100:.1f}%")
 
+        section("4b. Similarity spread and band-matched baseline")
+        sims = [x for x in all_sims if x]
+        top1 = sum(x[0] for x in sims) / max(1, len(sims))
+        topk = sum(x[-1] for x in sims) / max(1, len(sims))
+        gap = sum(x[0] - x[-1] for x in sims) / max(1, len(sims))
+        band_base = sum(band_matched_base) / max(1, len(band_matched_base))
+        log(f"  mean top-1 similarity           : {top1:.4f}")
+        log(f"  mean top-{args.k} similarity           : {topk:.4f}")
+        log(f"  mean top-1 minus top-{args.k} gap      : {gap:.4f}")
+        log(f"  fraud rate of the queries' own bands: {band_base * 100:.1f}%  "
+            f"(neighbours were {neighbour_fraud_rate * 100:.1f}%)")
+        if band_base:
+            log(f"  lift over the band-matched baseline : {neighbour_fraud_rate / band_base:.2f}x")
+
         rings_represented = len(per_ring)
         ok = embedded > 0 and with_any > 0 and observed > chance and neighbour_fraud_rate > base_fraud_rate
         section("5. Verdict")
@@ -210,6 +233,9 @@ def main() -> int:
             "subset_fraud_rate": round(base_fraud_rate, 6),
             "labelled_neighbour_slots": labelled, "fraud_neighbours": fraud_neighbours,
             "same_band_neighbours": same_band,
+            "mean_top1_similarity": round(top1, 6), "mean_topk_similarity": round(topk, 6),
+            "mean_top1_minus_topk_gap": round(gap, 6),
+            "band_matched_fraud_rate": round(band_base, 6),
             "per_ring": {str(k): dict(v) for k, v in sorted(per_ring.items())},
             "members": detail,
             "passed": ok,
