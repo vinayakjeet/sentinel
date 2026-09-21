@@ -1,0 +1,63 @@
+[
+  {
+    "ring": 1,
+    "size": 13,
+    "device_id": "DEV-RING01",
+    "phone": "+919900000000",
+    "shared_ip": "10.99.1.1",
+    "members_sharing_ip": 6,
+    "months": [
+      0,
+      2,
+      3,
+      5,
+      6,
+      7
+    ]
+  },
+  {
+    "ring": 2,
+    "size": 15,
+    "device_id": "DEV-RING02",
+    "phone": "+919900000001",
+    "shared_ip": "10.99.2.2",
+    "members_sharing_ip": 7,
+    "months": [
+      0,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  {
+    "ring": 3,
+    "size": 9,
+    "device_id": "DEV-RING03",
+    "phone": "+919900000002",
+    "shared_ip": "10.99.3.3",
+    "members_sharing_ip": 4,
+    "months": [
+      0,
+      1,
+      2,
+      5,
+      6
+    ]
+  },
+  {
+    "ring": 4,
+    "size": 8,
+    "device_id": "DEV-RING04",
+    "phone": "+919900000003",
+    "shared_ip": "10.99.4.4",
+    "members_sharing_ip": 4,
+    "months": [
+      0,
+      1,
+      5,
+      6,
+      7
+    ]
+  }
+]
