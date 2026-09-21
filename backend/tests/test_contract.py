@@ -66,7 +66,6 @@ def test_login_wrong_password_401(client):
 @pytest.mark.parametrize(
     "method, path",
     [
-        ("get", f"/api/v1/entities/{uuid.uuid4()}/graph"),
         ("get", "/api/v1/metrics"),
         ("post", "/api/v1/stream/start"),
     ],

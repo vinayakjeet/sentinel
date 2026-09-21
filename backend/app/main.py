@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -17,9 +18,20 @@ setup_logging(settings.log_level)
 logger = logging.getLogger("app")
 
 
+def _warm_embedder() -> None:
+    """Load the case embedder before serving so the first decision doesn't stall on a model load/download."""
+    try:
+        from app.semantic.embedder import get_embedder
+
+        get_embedder().encode("warm-up")
+    except Exception:
+        logger.warning("embedder warm-up failed; similar-cases will load it lazily", exc_info=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.services = build_services(settings)
+    await asyncio.to_thread(_warm_embedder)
     logger.info("startup", extra={"env": settings.app_env, "model_version": app.state.services.scorer.model_version})
     yield
     logger.info("shutdown")

@@ -18,7 +18,9 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY . .
-RUN useradd --create-home --uid 1000 app
+RUN useradd --create-home --uid 1000 app \
+    && mkdir -p /home/app/.cache/huggingface \
+    && chown -R app /home/app/.cache
 USER app
 
 EXPOSE 8000

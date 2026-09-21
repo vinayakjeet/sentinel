@@ -6,6 +6,8 @@ from fastapi import Request
 from app.core.config import Settings
 from app.schemas.decision import Thresholds
 from app.services.decision_service import DecisionService
+from app.services.entity_resolver import EntityResolver
+from app.services.graph_service import GraphService
 from app.services.policy import PolicyEngine
 from app.services.scoring import ScoringService, StubScoringService
 
@@ -18,6 +20,7 @@ class Services:
 
     scorer: ScoringService
     policy: PolicyEngine
+    graph: GraphService
     decisions: DecisionService
 
 
@@ -47,7 +50,13 @@ def build_services(settings: Settings) -> Services:
             decline=settings.threshold_decline,
         )
     )
-    return Services(scorer=scorer, policy=policy, decisions=DecisionService(scorer, policy))
+    graph = GraphService(settings)
+    return Services(
+        scorer=scorer,
+        policy=policy,
+        graph=graph,
+        decisions=DecisionService(scorer, policy, EntityResolver(), graph),
+    )
 
 
 def get_services(request: Request) -> Services:

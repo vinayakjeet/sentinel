@@ -7,7 +7,9 @@ from app.core.logging import request_id_ctx
 from app.models import Application, Decision
 from app.repositories import audit_repo, decision_repo
 from app.schemas.application import ApplicationEvent
-from app.schemas.decision import DecisionResponse, GraphSignals
+from app.schemas.decision import DecisionResponse
+from app.services.entity_resolver import EntityResolver
+from app.services.graph_service import GraphService
 from app.services.normalize import normalize_name, sha256_hex
 from app.services.policy import PolicyEngine
 from app.services.scoring import ScoringService
@@ -16,11 +18,16 @@ logger = logging.getLogger(__name__)
 
 
 class DecisionService:
-    """validate (route) -> persist application -> score -> policy -> persist decision + audit -> response."""
+    """validate (route) -> persist application -> entities + graph signals -> score -> uplift -> policy
+    -> persist decision + audit -> response. One transaction."""
 
-    def __init__(self, scorer: ScoringService, policy: PolicyEngine) -> None:
+    def __init__(
+        self, scorer: ScoringService, policy: PolicyEngine, resolver: EntityResolver, graph: GraphService
+    ) -> None:
         self.scorer = scorer
         self.policy = policy
+        self.resolver = resolver
+        self.graph = graph
 
     def decide(
         self,
@@ -45,8 +52,9 @@ class DecisionService:
             ),
         )
 
-        # A4 replaces this with entity resolution + 2-hop graph signals.
-        signals, uplift = GraphSignals(), 0.0
+        self.resolver.resolve(db, app_row.id, event)
+        signals = self.graph.signals(db, app_row.id)
+        uplift = self.graph.uplift(signals)
 
         model_score = self.scorer.score(event)
         p_final = min(1.0, model_score.p_model + uplift)

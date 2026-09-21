@@ -8,6 +8,7 @@ the same code path used in training, so there is no train/serve skew.
 import importlib
 import json
 import logging
+import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,9 @@ from app.schemas.decision import ReasonCode
 from app.services.scoring import ModelScore
 
 logger = logging.getLogger(__name__)
+
+# shap 0.51 warns on every LightGBM binary explain call about its output format (handled in _contributions).
+warnings.filterwarnings("ignore", message="LightGBM binary classifier with TreeExplainer", category=UserWarning)
 
 Featurizer = Callable[[dict], pd.DataFrame]
 TOP_REASONS = 4

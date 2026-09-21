@@ -31,6 +31,8 @@ services:
       # Lane B outputs, read-only: ml/featurize.py + ml/artifacts/, data/replay/.
       - ./ml:/opt/sentinel/ml:ro
       - ./data:/opt/sentinel/data:ro
+      # Persist the MiniLM download across container recreates.
+      - hf-cache:/home/app/.cache/huggingface
     depends_on:
       db:
         condition: service_healthy
@@ -44,3 +46,4 @@ services:
 
 volumes:
   pgdata:
+  hf-cache:
