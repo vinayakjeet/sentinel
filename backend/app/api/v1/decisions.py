@@ -6,9 +6,11 @@ from sqlalchemy.orm import Session
 from app.core.security import Principal, get_current_user
 from app.db.session import get_db
 from app.repositories import decision_repo
+from app.schemas.adverse_action import AdverseActionNotice
 from app.schemas.application import ApplicationEvent
 from app.schemas.common import ErrorResponse
 from app.schemas.decision import Band, DecisionList, DecisionResponse
+from app.services.adverse_action import NotAdverseAction, build_notice
 from app.services.container import Services, get_services
 from app.services.decision_service import to_response
 
@@ -47,6 +49,29 @@ def get_decision(
     if not found:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "decision not found")
     return to_response(*found)
+
+
+@router.get(
+    "/{decision_id}/adverse-action",
+    response_model=AdverseActionNotice,
+    responses={
+        404: {"model": ErrorResponse},
+        409: {"model": ErrorResponse, "description": "Not a declined application"},
+    },
+    summary="Reg B adverse action notice (declined applications only)",
+)
+def get_adverse_action(
+    decision_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: Principal = Depends(get_current_user),
+) -> AdverseActionNotice:
+    found = decision_repo.get_decision(db, decision_id)
+    if not found:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "decision not found")
+    try:
+        return build_notice(to_response(*found))
+    except NotAdverseAction as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
 
 
 @router.get("", response_model=DecisionList)

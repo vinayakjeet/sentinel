@@ -114,4 +114,4 @@ Files: `backend/app/core/security.py`, `backend/app/api/v1/auth.py`, `backend/ap
 - Per model policy: after "go", switch me to **Sonnet** for A0–A3 (back to Opus at 16:00 for A4).
 
 ## Progress
-- [x] A0 (compose v5.5.1 in ~/.docker/cli-plugins)  - [x] A1 (13:15; /ready 200 from Windows; 2 tests green in container)  - [x] A2 (13:20; curl POST 201 → GET 200 identical, DB row + audit; 31 tests green)  - [ ] A3a  - [ ] A3  - [ ] G1  - [ ] A4  - [ ] A5  - [ ] G2  - [ ] A6  - [ ] A7  - [ ] A8  - [ ] G3
+- [x] A0 (compose v5.5.1 in ~/.docker/cli-plugins)  - [x] A1 (13:15; /ready 200 from Windows; 2 tests green in container)  - [x] A2 (13:20; curl POST 201 → GET 200 identical, DB row + audit; 31 tests green)  - [x] A3a (13:27; 18 paths in draft docs/openapi.json, login real, rest 501; 41 tests + ruff green)  - [ ] A3  - [ ] G1  - [ ] A4  - [ ] A5  - [ ] G2  - [ ] A6  - [ ] A7  - [ ] A8  - [ ] G3

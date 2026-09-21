@@ -8,11 +8,11 @@ os.environ["POSTGRES_DB"] = "sentinel_test"  # must precede any app import (sett
 
 import psycopg  # noqa: E402
 import pytest  # noqa: E402
-from alembic import command  # noqa: E402
-from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
+from alembic import command  # noqa: E402
+from alembic.config import Config  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 
 BACKEND = Path(__file__).resolve().parents[1]

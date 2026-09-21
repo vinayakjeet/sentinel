@@ -41,8 +41,10 @@ B6 guardrails/LLM invariant, R1 audit, or a bug that survived 2 fix attempts. As
 One line: "Switch to Opus for <task> — <reason>." Then wait.
 
 ## Current status
-- Lane A: A2 done 13:20. API http://localhost:8000 (/docs), Postgres localhost:5432 (creds in .env). POST /api/v1/decisions/application live
-  (stub score 0.5 → STEP_UP), GET /decisions/{id}, GET /decisions?band=. Sample payload: backend/tests/fixtures/application.json. Next: A3a contract stubs, A3 scoring.
+- Lane A: A3a done 13:27. API http://localhost:8000 (/docs), Postgres localhost:5432 (creds in .env). DRAFT docs/openapi.json has all
+  18 routes (freeze 16:00). Live: POST /auth/login (demo users in .env), POST /decisions/application (stub score), GET /decisions[/{id}],
+  /adverse-action. Other routes return 501 until built. SSE auth: GET /stream?token=<jwt>. Lane B: use app/schemas/cases.py + copilot.py
+  in your routers (don't redefine). Sample payload: backend/tests/fixtures/application.json. Next: A3 real scoring (waiting on ml/).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
 - Lane B: not started
 - Lane F: not started

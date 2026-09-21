@@ -1,0 +1,2118 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "SENTINEL",
+    "description": "Real-time application fraud detection for digital lending.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "ops"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Database unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/application": {
+      "post": {
+        "tags": [
+          "decisions"
+        ],
+        "summary": "Score a credit application and persist the decision",
+        "operationId": "decide_application_api_v1_decisions_application_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/decisions/{decision_id}": {
+      "get": {
+        "tags": [
+          "decisions"
+        ],
+        "summary": "Get Decision",
+        "operationId": "get_decision_api_v1_decisions__decision_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Decision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decision_id}/adverse-action": {
+      "get": {
+        "tags": [
+          "decisions"
+        ],
+        "summary": "Reg B adverse action notice (declined applications only)",
+        "operationId": "get_adverse_action_api_v1_decisions__decision_id__adverse_action_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Decision Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdverseActionNotice"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Not a declined application",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions": {
+      "get": {
+        "tags": [
+          "decisions"
+        ],
+        "summary": "List Decisions",
+        "operationId": "list_decisions_api_v1_decisions_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "band",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Band"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Band"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/entities/{application_id}/graph": {
+      "get": {
+        "tags": [
+          "entities"
+        ],
+        "summary": "2-hop application<->entity neighbourhood for the case graph",
+        "operationId": "get_entity_graph_api_v1_entities__application_id__graph_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityGraphResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stream": {
+      "get": {
+        "tags": [
+          "stream"
+        ],
+        "summary": "Live decision feed (SSE)",
+        "operationId": "stream_decisions_api_v1_stream_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "JWT; EventSource cannot send an Authorization header",
+              "title": "Token"
+            },
+            "description": "JWT; EventSource cannot send an Authorization header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events. `event: decision` carries a DecisionResponse JSON in `data`; `event: drift` carries a DriftEventOut JSON; `: ping` comments every 15 s keep the connection open.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "$ref": "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stream/status": {
+      "get": {
+        "tags": [
+          "stream"
+        ],
+        "summary": "Stream Status",
+        "operationId": "stream_status_api_v1_stream_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamStatus"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stream/switch": {
+      "post": {
+        "tags": [
+          "stream"
+        ],
+        "summary": "Switch replay source (admin)",
+        "operationId": "switch_source_api_v1_stream_switch_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "base",
+                "shift"
+              ],
+              "type": "string",
+              "description": "base = test months of Base; shift = variant file",
+              "title": "Source"
+            },
+            "description": "base = test months of Base; shift = variant file"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamStatus"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stream/start": {
+      "post": {
+        "tags": [
+          "stream"
+        ],
+        "summary": "Start replay (admin)",
+        "operationId": "start_stream_api_v1_stream_start_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamStatus"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/stream/stop": {
+      "post": {
+        "tags": [
+          "stream"
+        ],
+        "summary": "Stop replay (admin)",
+        "operationId": "stop_stream_api_v1_stream_stop_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamStatus"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/metrics": {
+      "get": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Get Metrics",
+        "operationId": "get_metrics_api_v1_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/metrics/drift": {
+      "get": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Get Drift",
+        "operationId": "get_drift_api_v1_metrics_drift_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriftStatus"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/metrics/drift/reset": {
+      "post": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Reset thresholds (admin)",
+        "operationId": "reset_drift_api_v1_metrics_drift_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriftStatus"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/cases/{decision_id}/similar": {
+      "get": {
+        "tags": [
+          "cases"
+        ],
+        "summary": "Nearest past cases by narrative embedding",
+        "operationId": "similar_cases_api_v1_cases__decision_id__similar_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "decision_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Decision Id"
+            }
+          },
+          {
+            "name": "k",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "default": 5,
+              "title": "K"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SimilarCasesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/copilot/ask": {
+      "post": {
+        "tags": [
+          "copilot"
+        ],
+        "summary": "Ask the read-only analyst copilot about a decision",
+        "operationId": "copilot_ask_api_v1_copilot_ask_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CopilotAskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CopilotAskResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdverseActionNotice": {
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Decision Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "action_taken": {
+            "$ref": "#/components/schemas/DecisionOutcome"
+          },
+          "notice_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Notice Date"
+          },
+          "principal_reasons": {
+            "items": {
+              "$ref": "#/components/schemas/PrincipalReason"
+            },
+            "type": "array",
+            "title": "Principal Reasons"
+          },
+          "ecoa_notice": {
+            "type": "string",
+            "title": "Ecoa Notice"
+          },
+          "right_to_request_reasons": {
+            "type": "string",
+            "title": "Right To Request Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision_id",
+          "application_id",
+          "action_taken",
+          "notice_date",
+          "principal_reasons",
+          "ecoa_notice",
+          "right_to_request_reasons"
+        ],
+        "title": "AdverseActionNotice",
+        "description": "Reg B (12 CFR 1002.9)-shaped notice. Applicant-facing: plain-language reasons only, no raw features/scores."
+      },
+      "ApplicationEvent": {
+        "properties": {
+          "income": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Income"
+          },
+          "name_email_similarity": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Name Email Similarity"
+          },
+          "prev_address_months_count": {
+            "type": "integer",
+            "maximum": 600.0,
+            "minimum": -1.0,
+            "title": "Prev Address Months Count"
+          },
+          "current_address_months_count": {
+            "type": "integer",
+            "maximum": 600.0,
+            "minimum": -1.0,
+            "title": "Current Address Months Count"
+          },
+          "customer_age": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 10.0,
+            "title": "Customer Age"
+          },
+          "days_since_request": {
+            "type": "number",
+            "maximum": 120.0,
+            "minimum": 0.0,
+            "title": "Days Since Request"
+          },
+          "intended_balcon_amount": {
+            "type": "number",
+            "maximum": 250.0,
+            "minimum": -100.0,
+            "title": "Intended Balcon Amount"
+          },
+          "payment_type": {
+            "type": "string",
+            "enum": [
+              "AA",
+              "AB",
+              "AC",
+              "AD",
+              "AE"
+            ],
+            "title": "Payment Type"
+          },
+          "zip_count_4w": {
+            "type": "integer",
+            "maximum": 20000.0,
+            "minimum": 0.0,
+            "title": "Zip Count 4W"
+          },
+          "velocity_6h": {
+            "type": "number",
+            "maximum": 50000.0,
+            "minimum": -1000.0,
+            "title": "Velocity 6H"
+          },
+          "velocity_24h": {
+            "type": "number",
+            "maximum": 50000.0,
+            "minimum": 0.0,
+            "title": "Velocity 24H"
+          },
+          "velocity_4w": {
+            "type": "number",
+            "maximum": 50000.0,
+            "minimum": 0.0,
+            "title": "Velocity 4W"
+          },
+          "bank_branch_count_8w": {
+            "type": "integer",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Bank Branch Count 8W"
+          },
+          "date_of_birth_distinct_emails_4w": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 0.0,
+            "title": "Date Of Birth Distinct Emails 4W"
+          },
+          "employment_status": {
+            "type": "string",
+            "enum": [
+              "CA",
+              "CB",
+              "CC",
+              "CD",
+              "CE",
+              "CF",
+              "CG"
+            ],
+            "title": "Employment Status"
+          },
+          "credit_risk_score": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": -500.0,
+            "title": "Credit Risk Score"
+          },
+          "email_is_free": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Email Is Free"
+          },
+          "housing_status": {
+            "type": "string",
+            "enum": [
+              "BA",
+              "BB",
+              "BC",
+              "BD",
+              "BE",
+              "BF",
+              "BG"
+            ],
+            "title": "Housing Status"
+          },
+          "phone_home_valid": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Phone Home Valid"
+          },
+          "phone_mobile_valid": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Phone Mobile Valid"
+          },
+          "bank_months_count": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": -1.0,
+            "title": "Bank Months Count"
+          },
+          "has_other_cards": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Has Other Cards"
+          },
+          "proposed_credit_limit": {
+            "type": "number",
+            "maximum": 10000.0,
+            "minimum": 0.0,
+            "title": "Proposed Credit Limit"
+          },
+          "foreign_request": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Foreign Request"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "INTERNET",
+              "TELEAPP"
+            ],
+            "title": "Source"
+          },
+          "session_length_in_minutes": {
+            "type": "number",
+            "maximum": 500.0,
+            "minimum": -1.0,
+            "title": "Session Length In Minutes"
+          },
+          "device_os": {
+            "type": "string",
+            "enum": [
+              "windows",
+              "macintosh",
+              "linux",
+              "x11",
+              "other"
+            ],
+            "title": "Device Os"
+          },
+          "keep_alive_session": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Keep Alive Session"
+          },
+          "device_distinct_emails_8w": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": -1.0,
+            "title": "Device Distinct Emails 8W"
+          },
+          "device_fraud_count": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 0.0,
+            "title": "Device Fraud Count"
+          },
+          "month": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 7.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month"
+          },
+          "device_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Device Id"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 1,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "pattern": "^\\+?[0-9 ()\\-]{7,31}$",
+            "title": "Phone"
+          },
+          "ip": {
+            "type": "string",
+            "maxLength": 45,
+            "minLength": 1,
+            "title": "Ip"
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Address"
+          },
+          "applicant_name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Applicant Name"
+          },
+          "external_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._:-]{1,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ref"
+          },
+          "history": {
+            "type": "boolean",
+            "title": "History",
+            "default": false
+          },
+          "fraud_bool": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fraud Bool"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "income",
+          "name_email_similarity",
+          "prev_address_months_count",
+          "current_address_months_count",
+          "customer_age",
+          "days_since_request",
+          "intended_balcon_amount",
+          "payment_type",
+          "zip_count_4w",
+          "velocity_6h",
+          "velocity_24h",
+          "velocity_4w",
+          "bank_branch_count_8w",
+          "date_of_birth_distinct_emails_4w",
+          "employment_status",
+          "credit_risk_score",
+          "email_is_free",
+          "housing_status",
+          "phone_home_valid",
+          "phone_mobile_valid",
+          "bank_months_count",
+          "has_other_cards",
+          "proposed_credit_limit",
+          "foreign_request",
+          "source",
+          "session_length_in_minutes",
+          "device_os",
+          "keep_alive_session",
+          "device_distinct_emails_8w",
+          "device_fraud_count",
+          "device_id",
+          "email",
+          "phone",
+          "ip",
+          "address",
+          "applicant_name"
+        ],
+        "title": "ApplicationEvent",
+        "description": "A raw credit application: every BAF column plus synthetic identifiers used for the entity graph.\n\nProtected attributes (customer_age, employment_status, income) are accepted for fairness evaluation\nbut are never model features (enforced in ml/featurize.py)."
+      },
+      "Band": {
+        "type": "string",
+        "enum": [
+          "APPROVE",
+          "STEP_UP",
+          "REVIEW",
+          "DECLINE"
+        ],
+        "title": "Band"
+      },
+      "CopilotAskRequest": {
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Decision Id"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Question"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision_id",
+          "question"
+        ],
+        "title": "CopilotAskRequest"
+      },
+      "CopilotAskResponse": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          },
+          "cited_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cited Reasons",
+            "description": "Feature keys of reason codes on this decision cited in the answer"
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked",
+            "description": "True if guardrails refused the question"
+          },
+          "fallback_used": {
+            "type": "boolean",
+            "title": "Fallback Used",
+            "description": "True if the LLM failed and a templated answer was returned"
+          }
+        },
+        "type": "object",
+        "required": [
+          "answer",
+          "cited_reasons",
+          "blocked",
+          "fallback_used"
+        ],
+        "title": "CopilotAskResponse"
+      },
+      "DecisionList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "DecisionList"
+      },
+      "DecisionOutcome": {
+        "type": "string",
+        "enum": [
+          "approved",
+          "pending_verification",
+          "pending_review",
+          "declined"
+        ],
+        "title": "DecisionOutcome",
+        "description": "What happens to the application. Band = risk tier; decision = resulting application status."
+      },
+      "DecisionResponse": {
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Decision Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "external_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ref"
+          },
+          "score": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "band": {
+            "$ref": "#/components/schemas/Band"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/DecisionOutcome"
+          },
+          "reason_codes": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCode"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "graph_signals": {
+            "$ref": "#/components/schemas/GraphSignals"
+          },
+          "graph_uplift": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Graph Uplift"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "latency_ms": {
+            "type": "number",
+            "title": "Latency Ms"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision_id",
+          "application_id",
+          "score",
+          "band",
+          "decision",
+          "reason_codes",
+          "graph_signals",
+          "graph_uplift",
+          "model_version",
+          "latency_ms",
+          "created_at"
+        ],
+        "title": "DecisionResponse"
+      },
+      "DriftEventOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "ts": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ts"
+          },
+          "detector": {
+            "type": "string",
+            "title": "Detector"
+          },
+          "stream": {
+            "type": "string",
+            "title": "Stream"
+          },
+          "old_thresholds": {
+            "$ref": "#/components/schemas/Thresholds"
+          },
+          "new_thresholds": {
+            "$ref": "#/components/schemas/Thresholds"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ts",
+          "detector",
+          "stream",
+          "old_thresholds",
+          "new_thresholds",
+          "details"
+        ],
+        "title": "DriftEventOut"
+      },
+      "DriftStatus": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "stable",
+              "drift_detected"
+            ],
+            "title": "State"
+          },
+          "thresholds": {
+            "$ref": "#/components/schemas/Thresholds"
+          },
+          "base_thresholds": {
+            "$ref": "#/components/schemas/Thresholds"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/DriftEventOut"
+            },
+            "type": "array",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "thresholds",
+          "base_thresholds",
+          "events"
+        ],
+        "title": "DriftStatus"
+      },
+      "EntityGraphResponse": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "title": "Application Id"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array",
+            "title": "Edges"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "application_id",
+          "nodes",
+          "edges",
+          "truncated"
+        ],
+        "title": "EntityGraphResponse",
+        "description": "Bipartite application<->entity neighbourhood (2 hops, capped at GRAPH_MAX_NODES)."
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse"
+      },
+      "GraphEdge": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "target"
+        ],
+        "title": "GraphEdge"
+      },
+      "GraphNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "application",
+              "device",
+              "email",
+              "phone",
+              "ip",
+              "address"
+            ],
+            "title": "Type"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "fraud": {
+            "type": "boolean",
+            "title": "Fraud"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "label",
+          "fraud"
+        ],
+        "title": "GraphNode"
+      },
+      "GraphSignals": {
+        "properties": {
+          "component_size": {
+            "type": "integer",
+            "title": "Component Size",
+            "default": 0
+          },
+          "distinct_names_per_device": {
+            "type": "integer",
+            "title": "Distinct Names Per Device",
+            "default": 0
+          },
+          "known_fraud_2hop": {
+            "type": "integer",
+            "title": "Known Fraud 2Hop",
+            "default": 0
+          },
+          "component_velocity_24h": {
+            "type": "integer",
+            "title": "Component Velocity 24H",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "GraphSignals"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "MetricsResponse": {
+        "properties": {
+          "p50": {
+            "type": "number",
+            "title": "P50"
+          },
+          "p95": {
+            "type": "number",
+            "title": "P95"
+          },
+          "p99": {
+            "type": "number",
+            "title": "P99"
+          },
+          "decisions_per_sec": {
+            "type": "number",
+            "title": "Decisions Per Sec"
+          },
+          "band_mix": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Band Mix",
+            "description": "Fraction of decisions per band in the window (sums to 1)"
+          },
+          "window": {
+            "type": "integer",
+            "title": "Window",
+            "description": "Number of decisions in the rolling window"
+          },
+          "total_decisions": {
+            "type": "integer",
+            "title": "Total Decisions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "p50",
+          "p95",
+          "p99",
+          "decisions_per_sec",
+          "band_mix",
+          "window",
+          "total_decisions"
+        ],
+        "title": "MetricsResponse",
+        "description": "Rolling-window service metrics. Latency percentiles in milliseconds."
+      },
+      "PrincipalReason": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Rank"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "ecoa_category": {
+            "type": "string",
+            "title": "Ecoa Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rank",
+          "reason",
+          "ecoa_category"
+        ],
+        "title": "PrincipalReason"
+      },
+      "ReadyResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Database"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "database"
+        ],
+        "title": "ReadyResponse"
+      },
+      "ReasonCode": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "ecoa_category": {
+            "type": "string",
+            "title": "Ecoa Category"
+          },
+          "contribution": {
+            "type": "number",
+            "title": "Contribution",
+            "description": "SHAP contribution toward fraud (log-odds, > 0)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "reason",
+          "ecoa_category",
+          "contribution"
+        ],
+        "title": "ReasonCode"
+      },
+      "SimilarCase": {
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Decision Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "similarity": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": -1.0,
+            "title": "Similarity",
+            "description": "Cosine similarity of case narratives"
+          },
+          "score": {
+            "type": "integer",
+            "title": "Score"
+          },
+          "band": {
+            "$ref": "#/components/schemas/Band"
+          },
+          "top_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Top Reasons",
+            "description": "Reason texts of the similar case, highest contribution first"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision_id",
+          "application_id",
+          "similarity",
+          "score",
+          "band",
+          "top_reasons",
+          "created_at"
+        ],
+        "title": "SimilarCase"
+      },
+      "SimilarCasesResponse": {
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Decision Id"
+          },
+          "k": {
+            "type": "integer",
+            "title": "K"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SimilarCase"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "decision_id",
+          "k",
+          "items"
+        ],
+        "title": "SimilarCasesResponse"
+      },
+      "StreamStatus": {
+        "properties": {
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "base",
+              "shift"
+            ],
+            "title": "Source"
+          },
+          "events_emitted": {
+            "type": "integer",
+            "title": "Events Emitted"
+          },
+          "rate_per_sec": {
+            "type": "number",
+            "title": "Rate Per Sec"
+          },
+          "subscribers": {
+            "type": "integer",
+            "title": "Subscribers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "running",
+          "source",
+          "events_emitted",
+          "rate_per_sec",
+          "subscribers"
+        ],
+        "title": "StreamStatus"
+      },
+      "Thresholds": {
+        "properties": {
+          "step_up": {
+            "type": "integer",
+            "title": "Step Up"
+          },
+          "review": {
+            "type": "integer",
+            "title": "Review"
+          },
+          "decline": {
+            "type": "integer",
+            "title": "Decline"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step_up",
+          "review",
+          "decline"
+        ],
+        "title": "Thresholds",
+        "description": "Score cut-offs: APPROVE < step_up <= STEP_UP < review <= REVIEW < decline <= DECLINE."
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "const": "bearer",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "analyst",
+              "admin"
+            ],
+            "title": "Role"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "role",
+          "expires_in"
+        ],
+        "title": "TokenResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "description": "JWT from POST /api/v1/auth/login",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
