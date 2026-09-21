@@ -1,0 +1,52 @@
+# SENTINEL — Lane B (ML) dependencies
+#
+# ==> LANE A: copy the [artifact-critical] block below into backend/requirements.txt VERBATIM. <==
+#
+# Why these exact pins, and why you cannot just take "latest":
+#
+#   ml/artifacts/*.pkl are pickled here on CPython 3.13 (the only interpreter on this host) and
+#   unpickled inside your python:3.11 api container. numpy / scipy / scikit-learn pickles only move
+#   safely between interpreters when the library versions match exactly — a mismatch either raises
+#   on load or, worse, silently reconstructs a subtly different estimator.
+#
+#   Resolving "latest" on 3.13 gives numpy 2.5.3 / scipy 1.18.1 / shap 0.52.0, and all three declare
+#   requires_python >= 3.12. They cannot be installed in a 3.11 image at all — so the naive pin set
+#   would have failed at your A3 image build, not here.
+#
+#   The set below is the newest fully stable set that resolves identically on py3.11-manylinux and
+#   py3.13-win_amd64 (verified with `pip install --dry-run --only-binary=:all: --python-version 3.11`
+#   across the manylinux tag list; zero pre-release packages — going any newer drags in
+#   numba 0.68.0rc1 / llvmlite 0.50.0rc3, which do not belong in an image).
+#
+#   Belt and braces: train.py also writes ml/artifacts/model_v1.txt, the LightGBM native text format,
+#   which is version independent. If model_v1.pkl ever refuses to load, load the .txt instead.
+#   IsolationForest has no such escape hatch, so scikit-learn's pin is the one that really matters.
+
+# --- [artifact-critical] — must match backend/requirements.txt exactly -------------------------
+numpy==2.4.6
+scipy==1.17.1
+pandas==3.0.6
+scikit-learn==1.9.1
+lightgbm==4.7.0
+shap==0.51.0
+numba==0.67.0
+llvmlite==0.49.0
+joblib==1.6.0
+cloudpickle==3.1.2
+pyyaml==6.0.3
+# --- end [artifact-critical] ------------------------------------------------------------------
+
+# Backend needs this too, for DESIGN §7 drift detection (your A5)
+river==0.26.1
+
+# Lane B only — not needed in the api image
+pyarrow==25.0.1          # parquet for data/processed/*.parquet
+matplotlib==3.11.2       # docs/charts/*.png
+httpx==0.28.1            # ml/scripts/load_demo_db.py posts through the API
+pytest==9.1.1
+
+# Semantic layer (DESIGN §8). These DO belong in the api image — exact pins follow once resolved;
+# see docs/PLAN-B.md §3. torch must come from the CPU wheel index in the image, or it pulls ~2 GB of CUDA:
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch
+# sentence-transformers
+# torch
