@@ -162,3 +162,59 @@ These were the places a defect would have been expensive, so they were checked s
    the idle figure alone against DESIGN §11.
 2. Nothing else. A4–A6 introduced no HIGH or MEDIUM defect in Lane A's own code; findings 12 and 13
    are both mine and both fixed.
+
+## 1b.5 — Measurements taken after the 40,000-row load
+
+Finding 14 asked for the idle figure next to the loaded one, so that neither gets quoted alone.
+Both were measured on the same stack, the same afternoon.
+
+| | p50 | p95 | p99 |
+|---|---|---|---|
+| **idle**, 30 sequential requests, nothing else running | **38.1 ms** | **40.8 ms** | max 124.1 ms |
+| **under a 6-worker bulk load** (40,000 rows, ~15 req/s sustained) | 278.6 ms | 449.8 ms | 577.2 ms |
+
+Client-observed wall time when idle was p50 46.4 ms, so roughly 8 ms of that is transport rather
+than the decision path. **DESIGN §11's < 200 ms budget holds comfortably for a single request**;
+the 279 ms figure is queueing under six concurrent writers on one developer machine, not the
+scoring path being slow. Finding 14 is therefore a reporting obligation rather than a defect — but
+the loaded number still belongs in the README, because a demo that bulk-loads will see it.
+
+*(The 30 idle probes are in the database as `idle-probe-000`…`029`. They were posted with
+`history=false`, so they set no `fraud_flag` and do not touch the entity graph's confirmed-fraud
+signal. They post-date `docs/demo_ids.json` and the B5v run below, so neither is affected.)*
+
+## 1b.6 — B5v: what the semantic layer actually retrieves
+
+The B5 acceptance criterion was "a ring member's top-5 contains other ring members", checkable only
+once B4 had loaded real data. `ml/scripts/verify_ring_similarity.py` runs it against the live stack.
+All 45 planted ring members across all 4 rings were loaded and embedded.
+
+**It passes, and the honest reading is that it passes narrowly:**
+
+- 4 of 45 ring members (8.9%) had a ring member in their top-5 — 4 hits across 225 neighbour slots,
+  a 1.78% hit rate against 0.11% by chance. **16× chance, but 8.9% of members.**
+- Every one of those 4 hits was a member of a *different* ring. **`same_ring_hits` is 0.**
+
+That is the expected result once you look at what is being embedded. The narrative carries band,
+reason codes and graph signals and **deliberately no identifiers** — so ring co-membership is not a
+signal it can see. Retrieving a ring's own members is the entity graph's job, and the entity graph
+does it (component sizes 15–24, +250 mean uplift). Asking narrative similarity to do it as well was
+the wrong question to score the feature on.
+
+The right question is whether it retrieves cases of the same kind, and it does:
+
+| | |
+|---|---|
+| neighbours that were actually fraud | **93 / 222 = 41.9%** |
+| fraud rate across the loaded 40,000 | 9.6% |
+| **precision lift** | **4.4×** |
+| neighbours in the same band as the query | 225 / 225 = **100%** |
+
+Caveat, stated rather than buried: cosine similarity among these narratives is **~0.99 for almost
+every pair** (median top-1 similarity 0.9919 across the 45 ring members). A short templated
+narrative embeds to nearly the same vector for every high-risk case, so the *ordering* within the
+top-5 carries little information even though the *set* is clearly the right neighbourhood. A
+discriminative narrative — or a reranker — would be the next change, and it needs a full re-embed,
+which is why it is recorded here rather than attempted at this hour.
+
+Raw numbers: `docs/ring_similarity.json`.

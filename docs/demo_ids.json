@@ -1,0 +1,71 @@
+{
+  "generated_at": "2026-09-21T18:11:56",
+  "api": "http://localhost:8000",
+  "rows_loaded": 40000,
+  "heroes": {
+    "clean_looking_ring_member": {
+      "decision_id": "06626752-c841-489c-9b9f-7485590aa64a",
+      "application_id": "f046b448-e978-41b7-968b-a26288abc3e8",
+      "external_ref": "demo-024996",
+      "score": 645,
+      "band": "STEP_UP",
+      "graph_uplift": 0.3,
+      "fraud_bool": 1,
+      "component_size": 15
+    },
+    "obvious_fraud": {
+      "decision_id": "f7adce42-e12d-4ed0-838d-697efcb1ee76",
+      "application_id": "90227529-ca48-4e32-a03f-3ff265a0c2b7",
+      "external_ref": "demo-039213",
+      "score": 1000,
+      "band": "DECLINE",
+      "graph_uplift": 0.25,
+      "fraud_bool": 1,
+      "component_size": 15
+    },
+    "clean_approve": {
+      "decision_id": "5fee8941-095a-4b2b-90f9-020c1b9fa97a",
+      "application_id": "6247ae73-ee9a-4c60-9ef4-376c09f673ac",
+      "external_ref": "demo-007404",
+      "score": 27,
+      "band": "APPROVE",
+      "graph_uplift": 0.0,
+      "fraud_bool": 0,
+      "component_size": 1
+    }
+  },
+  "rings": [
+    {
+      "ring": 1,
+      "device_id": "DEV-RING01",
+      "members_loaded": 13,
+      "component_size": 21,
+      "mean_score_before_uplift": 619.5,
+      "mean_score_after_uplift": 869.5
+    },
+    {
+      "ring": 2,
+      "device_id": "DEV-RING02",
+      "members_loaded": 15,
+      "component_size": 24,
+      "mean_score_before_uplift": 624.1,
+      "mean_score_after_uplift": 887.5
+    },
+    {
+      "ring": 3,
+      "device_id": "DEV-RING03",
+      "members_loaded": 9,
+      "component_size": 19,
+      "mean_score_before_uplift": 602.7,
+      "mean_score_after_uplift": 863.8
+    },
+    {
+      "ring": 4,
+      "device_id": "DEV-RING04",
+      "members_loaded": 8,
+      "component_size": 15,
+      "mean_score_before_uplift": 659.6,
+      "mean_score_after_uplift": 903.4
+    }
+  ]
+}

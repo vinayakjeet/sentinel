@@ -225,6 +225,24 @@ so" is not a defence for a real lending decision. `docs/responsible-ai.md` state
 change before this scored a real applicant. BAF bands age by decade, so DESIGN's `<25 / 25–50 / >50`
 buckets are mapped to `≤20 / 30–50 / ≥60`; that mapping is stated everywhere the numbers appear.
 
+### The graph and similar-cases, measured on the loaded demo
+
+From the 40,000-row demo load (`ml/scripts/load_demo_db.py`, `ml/scripts/verify_ring_similarity.py`):
+
+| | |
+|---|---|
+| planted rings recovered | **4 / 4**, component sizes 21 / 24 / 19 / 15 |
+| mean ring-member score, before → after graph uplift | 619–660 → **864–903** (+250 average) |
+| mean score, ring members vs everyone else | **880.4** vs 367.2 |
+| similar-cases: neighbours that were actually fraud | **41.9%** (93/222) against a 9.6% base rate — **4.4× lift** |
+| similar-cases: neighbours in the same band as the query | 100% |
+
+Read that last pair carefully. Similarity retrieves the *right kind* of case, but cosine similarity
+between these narratives is ~0.99 for nearly every pair, so the ordering inside the top-5 carries
+little information. And ring members mostly do **not** retrieve their own ring — correctly, because
+the narrative contains no identifiers. Finding a ring is the entity graph's job; finding a lookalike
+is this one's. `docs/audit-R1.md` §1b.6 has the full numbers, including the unflattering ones.
+
 Full details: **`docs/model-card.md`**, **`docs/responsible-ai.md`**.
 
 ---
@@ -326,10 +344,10 @@ Secret scanning is clean: gitleaks 8.30.1 over all commits in history, no leaks 
 
 - **The fairness result is a fail, not a caveat.** See §5 and `docs/responsible-ai.md`.
 - **Identifiers and rings are synthetic** (§6.1). The graph machinery is real; the rings are planted.
-- **Latency under bulk load exceeds the design budget.** DESIGN §11 targets p99 < 200 ms. Under a
-  six-worker bulk load the API measures p50 ≈ 324 ms / p95 ≈ 450 ms / p99 ≈ 590 ms, taken from
-  `GET /api/v1/metrics` during a 40,000-row load. The idle single-request figure is measured
-  separately in §5 of `docs/audit-R1.md`; whichever is quoted, it is said which one it is.
+- **Latency depends entirely on load, so both numbers are quoted.** A single request on an idle
+  stack takes **p50 38 ms / p95 41 ms**, comfortably inside DESIGN §11's 200 ms budget. Under the
+  six-worker bulk load the same stack measures **p50 279 ms / p95 450 ms / p99 577 ms** — queueing
+  on one developer machine, not a slow scoring path. Method and both runs: `docs/audit-R1.md` §1b.5.
 - **One machine, one process.** No horizontal scaling, no model registry, no feature store, no
   retraining pipeline. `docs/aws-target-architecture.md` describes the production shape and is honest
   about which parts are not free.

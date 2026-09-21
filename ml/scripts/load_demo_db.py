@@ -386,15 +386,18 @@ def pick_heroes(loaded: pd.DataFrame, ring_devices: set[str]) -> dict:
     """
 
     def as_item(row) -> dict:
+        # Everything here is written to JSON, and pandas hands back numpy scalars that
+        # json.dumps refuses. Coerce at the boundary rather than at the writer.
+        size = (row["graph_signals"] or {}).get("component_size")
         return {
-            "decision_id": row["decision_id"],
-            "application_id": row["application_id"],
-            "external_ref": row["external_ref"],
+            "decision_id": str(row["decision_id"]),
+            "application_id": str(row["application_id"]),
+            "external_ref": str(row["external_ref"]),
             "score": int(row["score"]),
-            "band": row["band"],
+            "band": str(row["band"]),
             "graph_uplift": float(row["graph_uplift"]),
-            "fraud_bool": row["fraud_bool"],
-            "component_size": (row["graph_signals"] or {}).get("component_size"),
+            "fraud_bool": None if pd.isna(row["fraud_bool"]) else int(row["fraud_bool"]),
+            "component_size": None if size is None else int(size),
         }
 
     heroes: dict = {"clean_looking_ring_member": None, "obvious_fraud": None, "clean_approve": None}

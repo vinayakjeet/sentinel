@@ -93,10 +93,21 @@ def main() -> int:
 
         ring_decision_ids = {item["decision_id"]: ring_ref_to_ring[ref] for ref, item in ring_cases.items()}
 
+        # decision_id -> was this application actually fraud? Retrieval quality is the question
+        # that matters for an analyst ("are the cases it shows me the kind I should be looking
+        # at"), and it can only be answered with the labels, which live in the CSV.
+        fraud_by_ref = {f"demo-{idx:06d}": int(row["fraud_bool"]) for idx, row in rows.iterrows()}
+        fraud_by_decision = {
+            item["decision_id"]: fraud_by_ref[ref] for ref, item in loaded.items() if ref in fraud_by_ref
+        }
+        base_fraud_rate = sum(fraud_by_decision.values()) / max(1, len(fraud_by_decision))
+
         section(f"2. Top-{args.k} similar cases for each ring member")
-        per_ring: dict[int, dict[str, int]] = defaultdict(lambda: {"members": 0, "any_ring_hits": 0,
-                                                                   "same_ring_hits": 0, "slots": 0,
-                                                                   "with_any_ring": 0, "not_embedded": 0})
+        per_ring: dict[int, dict[str, int]] = defaultdict(
+            lambda: {"members": 0, "any_ring_hits": 0, "same_ring_hits": 0, "slots": 0,
+                     "with_any_ring": 0, "not_embedded": 0, "labelled": 0,
+                     "fraud_neighbours": 0, "same_band": 0}
+        )
         detail: list[dict] = []
         for ref, item in sorted(ring_cases.items()):
             ring = ring_ref_to_ring[ref]
@@ -126,11 +137,17 @@ def main() -> int:
             stats["any_ring_hits"] += any_hits
             stats["same_ring_hits"] += same_hits
             stats["with_any_ring"] += 1 if any_hits else 0
+            labelled = [fraud_by_decision[n["decision_id"]] for n in neighbours
+                        if n["decision_id"] in fraud_by_decision]
+            stats["labelled"] += len(labelled)
+            stats["fraud_neighbours"] += sum(labelled)
+            stats["same_band"] += sum(1 for n in neighbours if n["band"] == item["band"])
             detail.append(
                 {
                     "external_ref": ref, "ring": ring, "decision_id": item["decision_id"],
                     "score": item["score"], "band": item["band"],
                     "ring_hits_in_top_k": any_hits, "same_ring_hits_in_top_k": same_hits,
+                    "fraud_neighbours": sum(labelled), "labelled_neighbours": len(labelled),
                     "top_similarity": round(float(neighbours[0]["similarity"]), 4),
                 }
             )
@@ -159,9 +176,25 @@ def main() -> int:
         log(f"  same rate if similarity were noise: {chance * 100:.4f}%")
         log(f"  lift over chance                : {observed / chance:.0f}x" if chance else "")
 
+        section("4. What similarity actually retrieves")
+        labelled = sum(s["labelled"] for s in per_ring.values())
+        fraud_neighbours = sum(s["fraud_neighbours"] for s in per_ring.values())
+        same_band = sum(s["same_band"] for s in per_ring.values())
+        neighbour_fraud_rate = fraud_neighbours / max(1, labelled)
+        log("  Retrieving a ring's *own* members is the entity graph's job, not this one - the")
+        log("  narrative carries no identifiers. What this should retrieve is cases of the same")
+        log("  kind. Measured over the same neighbour slots:")
+        log(f"  neighbours that were actually fraud : {fraud_neighbours} / {labelled} "
+            f"= {neighbour_fraud_rate * 100:.1f}%")
+        log(f"  fraud rate across the loaded subset : {base_fraud_rate * 100:.1f}%")
+        if base_fraud_rate:
+            log(f"  precision lift                      : {neighbour_fraud_rate / base_fraud_rate:.1f}x")
+        log(f"  neighbours in the same band         : {same_band} / {slots} "
+            f"= {same_band / max(1, slots) * 100:.1f}%")
+
         rings_represented = len(per_ring)
-        ok = embedded > 0 and with_any > 0 and observed > chance
-        section("4. Verdict")
+        ok = embedded > 0 and with_any > 0 and observed > chance and neighbour_fraud_rate > base_fraud_rate
+        section("5. Verdict")
         log(f"  rings represented in the load : {rings_represented} / {len(rings)}")
         log(f"  ring members retrieve ring members: {'YES' if with_any else 'NO'}")
         log(f"  result: {'PASS' if ok else 'FAIL'}")
@@ -173,6 +206,10 @@ def main() -> int:
             "members_with_a_ring_neighbour": with_any,
             "ring_hits": hits, "neighbour_slots": slots,
             "hit_rate": round(observed, 6), "chance_rate": round(chance, 8),
+            "neighbour_fraud_rate": round(neighbour_fraud_rate, 6),
+            "subset_fraud_rate": round(base_fraud_rate, 6),
+            "labelled_neighbour_slots": labelled, "fraud_neighbours": fraud_neighbours,
+            "same_band_neighbours": same_band,
             "per_ring": {str(k): dict(v) for k, v in sorted(per_ring.items())},
             "members": detail,
             "passed": ok,
