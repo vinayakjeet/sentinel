@@ -23,12 +23,11 @@ Run:  python ml/fairness.py
 
 from __future__ import annotations
 
-import io
 import json
 import pickle
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import matplotlib
@@ -74,7 +73,7 @@ def score_test_set() -> tuple[pd.DataFrame, np.ndarray]:
         model = pickle.load(fh)
     with open(ARTIFACT_DIR / "iforest_v1.pkl", "rb") as fh:
         ifo = pickle.load(fh)
-    blend = json.load(io.open(ARTIFACT_DIR / "blend.json", encoding="utf-8"))
+    blend = json.load(open(ARTIFACT_DIR / "blend.json", encoding="utf-8"))
 
     test = pd.read_parquet(PROC_DIR / "test.parquet")
     X = build_feature_frame(test)
@@ -124,7 +123,7 @@ def chart(results: dict, overall: dict) -> Path:
     ax.set_ylabel("False positive rate (%)")
     ax.set_title(f"Legitimate applicants declined\n(score >= {DECLINE_THRESHOLD})", fontsize=11)
     ax.legend(frameon=False, fontsize=9)
-    for b, v in zip(bars, fpr):
+    for b, v in zip(bars, fpr, strict=False):
         ax.text(b.get_x() + b.get_width() / 2, v, f"{v:.3f}%", ha="center", va="bottom", fontsize=9)
 
     ax = axes[1]
@@ -134,7 +133,7 @@ def chart(results: dict, overall: dict) -> Path:
     ax.set_ylabel("Approval rate (%)")
     ax.set_title(f"Straight-through approvals\n(score < {APPROVE_THRESHOLD})", fontsize=11)
     ax.legend(frameon=False, fontsize=9)
-    for b, v in zip(bars, approval):
+    for b, v in zip(bars, approval, strict=False):
         ax.text(b.get_x() + b.get_width() / 2, v, f"{v:.1f}%", ha="center", va="bottom", fontsize=9)
 
     for ax in axes:
@@ -210,10 +209,10 @@ def main() -> int:
     log(f"  {path.relative_to(REPO).as_posix()}")
 
     metrics_path = ARTIFACT_DIR / "metrics_v1.json"
-    doc = json.load(io.open(metrics_path, encoding="utf-8"))
+    doc = json.load(open(metrics_path, encoding="utf-8"))
     doc["fairness"] = {
         "status": "measured",
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "evaluated_on": "test.parquet (months 6-7)",
         "score_used": "blended score, before graph uplift (uplift is applied in the backend)",
         "approve_threshold": APPROVE_THRESHOLD,

@@ -15,7 +15,8 @@ Two things are deliberately excluded:
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping
+from collections.abc import Iterable, Mapping
+from typing import Any
 
 MAX_REASONS = 4
 
@@ -37,16 +38,16 @@ def _graph_phrase(signals: Mapping[str, Any] | None) -> str:
 
     parts: list[str] = []
     size = signals.get("component_size")
-    if isinstance(size, (int, float)) and size > 1:
+    if isinstance(size, int | float) and size > 1:
         parts.append(f"linked to {int(size) - 1} other applications")
     names = signals.get("distinct_names_per_device")
-    if isinstance(names, (int, float)) and names > 1:
+    if isinstance(names, int | float) and names > 1:
         parts.append(f"{int(names)} different names seen on the same device")
     known = signals.get("known_fraud_2hop")
-    if isinstance(known, (int, float)) and known > 0:
+    if isinstance(known, int | float) and known > 0:
         parts.append(f"{int(known)} confirmed fraud cases within two hops")
     velocity = signals.get("component_velocity_24h")
-    if isinstance(velocity, (int, float)) and velocity > 1:
+    if isinstance(velocity, int | float) and velocity > 1:
         parts.append(f"{int(velocity)} applications from this cluster in 24 hours")
 
     return "; ".join(parts) if parts else "no linked applications found"
@@ -66,7 +67,9 @@ def build_narrative(
     reason_phrase = "; ".join(reasons) if reasons else "no individual risk drivers stood out"
 
     sentences = [
-        f"Application placed in the {band} band" + (f", outcome {decision.lower().replace('_', ' ')}" if decision else "") + ".",
+        f"Application placed in the {band} band"
+        + (f", outcome {decision.lower().replace('_', ' ')}" if decision else "")
+        + ".",
         f"Main risk drivers: {reason_phrase}.",
         f"Entity linkage: {_graph_phrase(graph_signals)}.",
     ]

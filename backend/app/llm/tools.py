@@ -16,9 +16,10 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator
+from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session

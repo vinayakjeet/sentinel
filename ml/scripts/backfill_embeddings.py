@@ -83,7 +83,7 @@ def main() -> int:
             ]
             vectors = embedder.encode_many(narratives)
 
-            for row, narrative, vector in zip(rows, narratives, vectors):
+            for row, narrative, vector in zip(rows, narratives, vectors, strict=False):
                 meta = narrative_metadata(
                     band=row["band"],
                     reason_codes=row.get("reason_codes"),

@@ -21,7 +21,8 @@ RING_SIGNALS = {
 }
 REASONS = [
     {"feature": "prev_address_months_count", "reason": "Little recorded history at the previous address."},
-    {"feature": "device_distinct_emails_8w", "reason": "Several different email addresses have recently been used from this device."},
+    {"feature": "device_distinct_emails_8w",
+     "reason": "Several different email addresses have recently been used from this device."},
 ]
 
 
@@ -42,7 +43,10 @@ def test_narrative_carries_no_personal_data():
     """
     text = build_narrative(
         band="DECLINE", decision="DECLINED",
-        reason_codes=REASONS + [{"feature": "email_is_free", "reason": "The application used a free email provider rather than a personal or work domain."}],
+        reason_codes=REASONS + [{
+            "feature": "email_is_free",
+            "reason": "The application used a free email provider rather than a personal domain.",
+        }],
         graph_signals=RING_SIGNALS, graph_uplift=0.15,
     )
     for leaked in ("@", "+91", "DEV-", "10.", "Mumbai"):

@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # Secrets first and on their own: if something leaked, that matters more than whether tests pass.
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # gitleaks needs history to scan past commits
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install ruff==0.11.8
+      - name: Lint
+        run: ruff check backend ml
+      - name: Format check
+        run: ruff format --check backend ml
+        continue-on-error: true   # formatting is advisory; a failed format must not gate a fix
+
+  backend:
+    name: backend tests (postgres + pgvector)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: sentinel
+          POSTGRES_PASSWORD: sentinel
+          POSTGRES_DB: sentinel
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sentinel"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel
+      POSTGRES_DB: sentinel
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      JWT_SECRET: ci-only-not-a-real-secret
+      DEMO_ANALYST_USERNAME: analyst
+      DEMO_ANALYST_PASSWORD: ci-analyst
+      DEMO_ADMIN_USERNAME: admin
+      DEMO_ADMIN_PASSWORD: ci-admin
+      ARTIFACTS_DIR: ${{ github.workspace }}/ml/artifacts
+      REPLAY_DIR: ${{ github.workspace }}/data/replay
+      LLM_PROVIDER: "null"        # never call a real model in CI
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      # The semantic layer needs these; torch from the CPU index, or the job pulls ~2 GB of CUDA.
+      - name: Install semantic dependencies (CPU torch)
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch==2.14.0
+          pip install sentence-transformers==6.1.0 transformers==5.17.0
+
+      - name: Verify ML pins match ml/requirements.txt
+        # The artifacts are pickled against ml/requirements.txt. If backend/requirements.txt drifts,
+        # the API loads a model built by a different library version - which fails at runtime, not
+        # here, unless we check it here.
+        run: |
+          python - <<'PY'
+          import re, sys, pathlib
+          def pins(path, section=None):
+              out = {}
+              inside = section is None
+              for line in pathlib.Path(path).read_text().splitlines():
+                  s = line.strip()
+                  if section and s.startswith("# ---") and section in s:
+                      inside = not inside if "end" not in s else False
+                      continue
+                  if not inside or not s or s.startswith("#"):
+                      continue
+                  m = re.match(r"^([A-Za-z0-9_.\-]+)==([^\s;#]+)", s)
+                  if m:
+                      out[m.group(1).lower().replace("_", "-")] = m.group(2)
+              return out
+          ml = pins("ml/requirements.txt")
+          be = pins("backend/requirements.txt")
+          critical = ["numpy", "scipy", "pandas", "scikit-learn", "lightgbm", "shap", "joblib", "pyyaml", "cloudpickle"]
+          bad = [(p, ml.get(p), be.get(p)) for p in critical
+                 if p in ml and p in be and ml[p] != be[p]]
+          if bad:
+              print("ML pins differ between ml/ and backend/ - artifacts will not load:")
+              for p, a, b in bad:
+                  print(f"  {p}: ml={a} backend={b}")
+              sys.exit(1)
+          print("ML pins agree on:", ", ".join(p for p in critical if p in ml and p in be))
+          PY
+
+      - name: Run migrations
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: pytest
+        working-directory: backend
+        run: python -m pytest tests -q
+
+  ml:
+    name: ml tests
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install ML dependencies
+        # Only the artifact-critical set; the ml tests do not need torch or matplotlib.
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy==2.4.6 scipy==1.17.1 pandas==3.0.6 scikit-learn==1.9.1 \
+                      lightgbm==4.7.0 shap==0.51.0 joblib==1.6.0 cloudpickle==3.1.2 \
+                      pyyaml==6.0.3 pytest==9.1.1
+
+      - name: pytest
+        run: python -m pytest ml/tests -q
+
+      - name: Artifacts load from a cold interpreter
+        # The artifacts are committed, so CI can prove Lane A's startup path works on a clean
+        # machine with only the pinned versions installed.
+        run: |
+          python - <<'PY'
+          import json, pickle, pathlib
+          A = pathlib.Path("ml/artifacts")
+          model = pickle.loads((A / "model_v1.pkl").read_bytes())
+          ifo = pickle.loads((A / "iforest_v1.pkl").read_bytes())
+          pre = pickle.loads((A / "preprocess_v1.pkl").read_bytes())
+          feats = json.loads((A / "features.json").read_text())
+          assert set(ifo) == {"model", "min", "max"}, ifo.keys()
+          assert pre["feature_order"] == feats["feature_order"]
+          assert model.best_iteration_ > 10, "model collapsed to a stump"
+          print(f"artifacts OK: {feats['n_features']} features, {model.best_iteration_} trees")
+          PY

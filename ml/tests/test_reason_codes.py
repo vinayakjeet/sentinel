@@ -8,7 +8,6 @@ failure instead.
 
 from __future__ import annotations
 
-import io
 import json
 import sys
 from pathlib import Path
@@ -87,7 +86,7 @@ def test_validate_rejects_an_off_vocabulary_category(monkeypatch):
 )
 def test_published_yaml_matches_the_source_module():
     """ml/artifacts/reason_codes.yaml is what Lane A actually reads; it must not drift."""
-    published = yaml.safe_load(io.open(ARTIFACT_DIR / "reason_codes.yaml", encoding="utf-8"))
+    published = yaml.safe_load(open(ARTIFACT_DIR / "reason_codes.yaml", encoding="utf-8"))
     assert published == REASON_CODES, (
         "ml/artifacts/reason_codes.yaml is stale — re-run ml/train.py after editing ml/reason_codes.py"
     )
@@ -97,6 +96,6 @@ def test_published_yaml_matches_the_source_module():
     not (ARTIFACT_DIR / "features.json").exists(), reason="run ml/train.py first"
 )
 def test_published_features_match_the_published_reason_codes():
-    features = json.load(io.open(ARTIFACT_DIR / "features.json", encoding="utf-8"))["feature_order"]
-    published = yaml.safe_load(io.open(ARTIFACT_DIR / "reason_codes.yaml", encoding="utf-8"))
+    features = json.load(open(ARTIFACT_DIR / "features.json", encoding="utf-8"))["feature_order"]
+    published = yaml.safe_load(open(ARTIFACT_DIR / "reason_codes.yaml", encoding="utf-8"))
     assert set(features) == set(published), "artifacts disagree about the feature set"

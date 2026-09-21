@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Sequence
+from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 EMBEDDING_DIM = 384
 
 _lock = threading.Lock()
-_embedder: "CaseEmbedder | None" = None
+_embedder: CaseEmbedder | None = None
 
 
 class CaseEmbedder:

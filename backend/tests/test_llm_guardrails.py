@@ -37,9 +37,11 @@ DECISION = {
     "model_version": "v1",
     "graph_uplift": 0.15,
     "reason_codes": [
-        {"feature": "prev_address_months_count", "reason": "Little recorded history at the previous address.",
+        {"feature": "prev_address_months_count",
+         "reason": "Little recorded history at the previous address.",
          "ecoa_category": "Length of residence", "contribution": 0.41},
-        {"feature": "device_distinct_emails_8w", "reason": "Several different email addresses have recently been used from this device.",
+        {"feature": "device_distinct_emails_8w",
+         "reason": "Several different email addresses have recently been used from this device.",
          "ecoa_category": "Unable to verify identity", "contribution": 0.22},
     ],
     "graph_signals": {"component_size": 12, "known_fraud_2hop": 2},
@@ -153,7 +155,10 @@ def test_injection_blocked(stub_tools, attack):
 
 def test_legitimate_questions_are_not_blocked(stub_tools):
     """A guardrail that blocks everything is useless; these must get through."""
-    provider = FakeProvider('{"answer": "The applicant had little address history.", "cited_reasons": ["prev_address_months_count"]}')
+    provider = FakeProvider(
+        '{"answer": "The applicant had little address history.",'
+        ' "cited_reasons": ["prev_address_months_count"]}'
+    )
     for question in (
         "Why was this application placed in the REVIEW band?",
         "What were the main risk drivers here?",

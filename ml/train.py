@@ -26,7 +26,7 @@ import json
 import pickle
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import lightgbm as lgb
@@ -37,7 +37,6 @@ import yaml
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
-
 from sklearn.ensemble import IsolationForest  # noqa: E402
 from sklearn.metrics import (  # noqa: E402
     average_precision_score,
@@ -56,7 +55,8 @@ from ml.featurize import (  # noqa: E402
     build_features,
     feature_metadata,
 )
-from ml.reason_codes import REASON_CODES, validate as validate_reason_codes  # noqa: E402
+from ml.reason_codes import REASON_CODES  # noqa: E402
+from ml.reason_codes import validate as validate_reason_codes  # noqa: E402
 
 PROC_DIR = REPO / "data" / "processed"
 ARTIFACT_DIR = REPO / "ml" / "artifacts"
@@ -346,7 +346,7 @@ def main() -> int:
     log(f"  blend = {W_SUPERVISED} * lightgbm + {W_ANOMALY} * anomaly")
     rules_q = fit_rules_baseline(train_raw)
     p_baseline_test = apply_rules_baseline(test_raw, rules_q)
-    log(f"  rules baseline: 12 rules, thresholds from train quantiles only")
+    log("  rules baseline: 12 rules, thresholds from train quantiles only")
 
     section("6. Test-set metrics (months 6-7, never seen in training)")
     score_sets = {
@@ -406,7 +406,7 @@ def main() -> int:
 
     metrics_doc = {
         "model_version": MODEL_VERSION,
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "data": {
             "train_rows": int(len(train_raw)),
             "test_rows": int(len(test_raw)),

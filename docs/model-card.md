@@ -76,7 +76,7 @@ training calls, so train/serve skew is structurally impossible rather than merel
 
 * LightGBM binary classifier, `scale_pos_weight = 99.25`, learning rate 0.05, 63 leaves,
   `min_child_samples=100`, subsample 0.8, colsample 0.8, `reg_lambda=1.0`, seed 20260921.
-* Early stopping on **month 5 PR-AUC**, patience 100 → **185 trees**, validation PR-AUC **0.1715**.
+* Early stopping on **month 5 PR-AUC**, patience 100 → **185 trees**, validation PR-AUC **0.1758**.
   LightGBM's default `binary_logloss` metric is disabled: at `scale_pos_weight ≈ 99` it is best at
   iteration 1 and never improves, which silently early-stops the fit into a single tree. `train.py`
   asserts `best_iteration_ > 10` so that failure cannot recur unnoticed.
@@ -205,6 +205,8 @@ python -m venv .venv && .venv/Scripts/pip install -r ml/requirements.txt
 python ml/scripts/prepare_data.py     # split, demo sample, rings, replay streams
 python ml/train.py                    # models, artifacts, charts, metrics
 python ml/fairness.py                 # fairness block + docs/charts/fairness.png
+                                      # ^ must run AFTER train.py: train.py rewrites
+                                      #   metrics_v1.json with fairness "pending"
 python -m pytest ml/tests -q
 ```
 

@@ -28,7 +28,8 @@ Design decisions enforced here:
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 import pandas as pd
 

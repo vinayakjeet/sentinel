@@ -41,7 +41,7 @@ class Vector(UserDefinedType):
         def process(value):
             if value is None:
                 return None
-            if isinstance(value, (list, tuple)):
+            if isinstance(value, list | tuple):
                 return [float(v) for v in value]
             return [float(x) for x in str(value).strip("[]").split(",") if x]
 

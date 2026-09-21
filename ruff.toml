@@ -1,0 +1,8 @@
+# Root ruff config, so ml/ is held to the same standard as backend/.
+# backend/pyproject.toml carries its own copy and takes precedence for files under backend/;
+# these settings are kept identical on purpose, so a file does not change meaning when it moves.
+line-length = 120
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "B", "UP"]

@@ -24,7 +24,7 @@ import argparse
 import json
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -225,7 +225,7 @@ def build_raw_columns_contract(df: pd.DataFrame, n_rows: int) -> dict:
                 "has_missing_sentinel": bool((arr == MISSING_SENTINEL).any()),
             }
     return {
-        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "source": "data/raw/Base.csv (Feedzai BAF, NeurIPS 2022)",
         "n_rows": int(n_rows),
         "label_column": LABEL,
@@ -262,7 +262,10 @@ def report_raw(df: pd.DataFrame) -> None:
         cnt = int((df[col] == MISSING_SENTINEL).sum())
         if cnt:
             found_any = True
-            flag = "  <- flagged in featurize" if col in SENTINEL_COLS else "  <- real value, not a sentinel (column range is genuinely negative)"
+            flag = (
+                "  <- flagged in featurize" if col in SENTINEL_COLS
+                else "  <- real value, not a sentinel (this column's range is genuinely negative)"
+            )
             log(f"  {col:<34} {cnt:>9,}  ({cnt / n * 100:5.2f}%){flag}")
     if not found_any:
         log("  none found")
@@ -345,7 +348,8 @@ def main() -> int:
     for r in rings:
         log(
             f"  ring {r['ring']}: {r['size']:>2} fraud rows | device={r['device_id']} "
-            f"phone={r['phone']} | {r['members_sharing_ip']} share ip {r['shared_ip']} | months={r['months']}"
+            f"phone={r['phone']} | {r['members_sharing_ip']} share ip {r['shared_ip']} "
+            f"| months={r['months']}"
         )
     # acceptance assertions — a silently broken ring would waste Lane A's entity-graph demo
     for r in rings:
@@ -392,8 +396,10 @@ def main() -> int:
     shift_stream = shift_stream.iloc[:n_stream]
     base_stream.to_csv(REPLAY_DIR / "stream_base.csv", index=False)
     shift_stream.to_csv(REPLAY_DIR / "stream_shift.csv", index=False)
-    log(f"  stream_base.csv : {len(base_stream):>9,} rows  fraud {base_stream[LABEL].mean() * 100:.3f}%  (Base, months {list(TEST_MONTHS)})")
-    log(f"  stream_shift.csv: {len(shift_stream):>9,} rows  fraud {shift_stream[LABEL].mean() * 100:.3f}%  ({variant_path.name}, months {list(TEST_MONTHS)})")
+    log(f"  stream_base.csv : {len(base_stream):>9,} rows  "
+        f"fraud {base_stream[LABEL].mean() * 100:.3f}%  (Base, months {list(TEST_MONTHS)})")
+    log(f"  stream_shift.csv: {len(shift_stream):>9,} rows  "
+        f"fraud {shift_stream[LABEL].mean() * 100:.3f}%  ({variant_path.name}, months {list(TEST_MONTHS)})")
     log("  identifiers in the shift stream use a separate seed, so it brings its own entities")
 
     # a quick, honest look at whether the variant actually shifts — Lane A's ADWIN demo depends on it
@@ -409,7 +415,7 @@ def main() -> int:
     movers.sort(reverse=True)
     for rel, col, b, s in movers[:8]:
         log(f"  {col:<34} {b:>12.4f} {s:>12.4f} {rel * 100:>10.1f}%")
-    log(f"  (largest movers shown; Lane A's A5 needs a visible shift for ADWIN to fire)")
+    log("  (largest movers shown; Lane A's A5 needs a visible shift for ADWIN to fire)")
 
     section("9. Column contract for Lane A")
     contract = build_raw_columns_contract(df, len(df))
