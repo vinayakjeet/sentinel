@@ -37,11 +37,21 @@ class Settings(BaseSettings):
     uplift_names_per_device_min: int = 3
     graph_max_nodes: int = 200
 
-    # Drift (DESIGN §7)
+    # Drift (DESIGN §7). adwin_delta=0.1: tuned on the replay files (0 false alarms in 20k base events;
+    # the river default 0.002 never fired within 3k events of the real variant shift).
     drift_tighten_delta: int = 75
-    adwin_delta: float = 0.002
+    adwin_delta: float = 0.1
     label_lag_events: int = 200
-    replay_rate_per_sec: float = 20.0
+    drift_cooldown_events: int = 500
+    drift_max_tightenings: int = 2
+
+    # Replay (in-process stream through the same scoring path)
+    replay_rate_per_sec: float = 30.0
+    replay_workers: int = 4
+    # Simulated fraud wave: share of fraud rows in the `shift` source (Variant file rows, fraud oversampled).
+    # 0 = replay the variant file as-is. Disclosed in README / demo narration.
+    replay_shift_fraud_rate: float = 0.12
+    replay_seed: int = 42
 
     # Security (DESIGN §13)
     jwt_secret: SecretStr | None = None

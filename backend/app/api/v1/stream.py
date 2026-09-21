@@ -1,11 +1,19 @@
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse
+import asyncio
+from collections.abc import AsyncIterator
 
-from app.api.v1._stub import NOT_IMPLEMENTED, not_implemented
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
 from app.core.security import Principal, get_current_user, get_current_user_sse, require_admin
+from app.db.session import get_db
+from app.repositories import audit_repo
 from app.schemas.stream import StreamSource, StreamStatus
+from app.services.container import Services, get_services
 
 router = APIRouter(prefix="/stream", tags=["stream"])
+
+HEARTBEAT_SECONDS = 15.0
 
 
 class EventSourceResponse(StreamingResponse):
@@ -20,7 +28,6 @@ _SSE_DOC = {
         ),
         "content": {"text/event-stream": {"schema": {"$ref": "#/components/schemas/DecisionResponse"}}},
     },
-    **NOT_IMPLEMENTED,
 }
 
 
@@ -31,28 +38,70 @@ _SSE_DOC = {
     responses=_SSE_DOC,
     summary="Live decision feed (SSE)",
 )
-def stream_decisions(user: Principal = Depends(get_current_user_sse)):
-    not_implemented("decision stream (A5)")
+async def stream_decisions(
+    request: Request,
+    user: Principal = Depends(get_current_user_sse),
+    services: Services = Depends(get_services),
+):
+    queue = services.broadcaster.subscribe()
+
+    async def events() -> AsyncIterator[str]:
+        try:
+            yield ": connected\n\n"
+            while not await request.is_disconnected():
+                try:
+                    event, data = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_SECONDS)
+                except TimeoutError:
+                    yield ": ping\n\n"
+                    continue
+                yield f"event: {event}\ndata: {data}\n\n"
+        finally:
+            services.broadcaster.unsubscribe(queue)
+
+    return EventSourceResponse(events(), headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
-@router.get("/status", response_model=StreamStatus, responses=NOT_IMPLEMENTED)
-def stream_status(user: Principal = Depends(get_current_user)) -> StreamStatus:
-    not_implemented("stream status (A5)")
+@router.get("/status", response_model=StreamStatus)
+def stream_status(
+    user: Principal = Depends(get_current_user), services: Services = Depends(get_services)
+) -> StreamStatus:
+    return services.replay.status()
 
 
-@router.post("/switch", response_model=StreamStatus, responses=NOT_IMPLEMENTED, summary="Switch replay source (admin)")
-def switch_source(
+def _audit(db: Session, user: Principal, action: str, details: dict) -> None:
+    audit_repo.write(db, actor=user.username, action=action, resource_type="stream", details=details)
+    db.commit()
+
+
+@router.post("/switch", response_model=StreamStatus, summary="Switch replay source (admin)")
+async def switch_source(
     source: StreamSource = Query(..., description="base = test months of Base; shift = variant file"),
     user: Principal = Depends(require_admin),
+    services: Services = Depends(get_services),
+    db: Session = Depends(get_db),
 ) -> StreamStatus:
-    not_implemented("stream switch (A5)")
+    status = await services.replay.switch(source)
+    _audit(db, user, "stream.switch", {"source": source})
+    return status
 
 
-@router.post("/start", response_model=StreamStatus, responses=NOT_IMPLEMENTED, summary="Start replay (admin)")
-def start_stream(user: Principal = Depends(require_admin)) -> StreamStatus:
-    not_implemented("stream start (A5)")
+@router.post("/start", response_model=StreamStatus, summary="Start replay (admin)")
+async def start_stream(
+    user: Principal = Depends(require_admin),
+    services: Services = Depends(get_services),
+    db: Session = Depends(get_db),
+) -> StreamStatus:
+    status = await services.replay.start()
+    _audit(db, user, "stream.start", {"source": status.source})
+    return status
 
 
-@router.post("/stop", response_model=StreamStatus, responses=NOT_IMPLEMENTED, summary="Stop replay (admin)")
-def stop_stream(user: Principal = Depends(require_admin)) -> StreamStatus:
-    not_implemented("stream stop (A5)")
+@router.post("/stop", response_model=StreamStatus, summary="Stop replay (admin)")
+async def stop_stream(
+    user: Principal = Depends(require_admin),
+    services: Services = Depends(get_services),
+    db: Session = Depends(get_db),
+) -> StreamStatus:
+    status = await services.replay.stop()
+    _audit(db, user, "stream.stop", {"events_emitted": status.events_emitted})
+    return status

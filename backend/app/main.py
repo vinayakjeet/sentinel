@@ -30,10 +30,13 @@ def _warm_embedder() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    app.state.services = build_services(settings)
+    services = build_services(settings)
+    services.broadcaster.bind(asyncio.get_running_loop())
+    app.state.services = services
     await asyncio.to_thread(_warm_embedder)
-    logger.info("startup", extra={"env": settings.app_env, "model_version": app.state.services.scorer.model_version})
+    logger.info("startup", extra={"env": settings.app_env, "model_version": services.scorer.model_version})
     yield
+    await services.replay.stop()
     logger.info("shutdown")
 
 

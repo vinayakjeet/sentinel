@@ -63,17 +63,6 @@ def test_login_wrong_password_401(client):
     assert r.status_code == 401
 
 
-@pytest.mark.parametrize(
-    "method, path",
-    [
-        ("get", "/api/v1/metrics"),
-        ("post", "/api/v1/stream/start"),
-    ],
-)
-def test_unbuilt_routes_return_501(client, method, path):
-    assert client.request(method, path).status_code == 501
-
-
 def _decision(band: Band, n_reasons: int) -> DecisionResponse:
     return DecisionResponse(
         decision_id=uuid.uuid4(),

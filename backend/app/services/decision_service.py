@@ -1,5 +1,6 @@
 import logging
 import time
+from typing import Protocol
 
 from sqlalchemy.orm import Session
 
@@ -17,6 +18,10 @@ from app.services.scoring import ScoringService
 logger = logging.getLogger(__name__)
 
 
+class DecisionObserver(Protocol):
+    def __call__(self, response: DecisionResponse, *, history: bool, label: int | None, source: str) -> None: ...
+
+
 class DecisionService:
     """validate (route) -> persist application -> entities + graph signals -> score -> uplift -> policy
     -> persist decision + audit -> response. One transaction."""
@@ -28,6 +33,7 @@ class DecisionService:
         self.policy = policy
         self.resolver = resolver
         self.graph = graph
+        self.observer: DecisionObserver | None = None  # set by the container (metrics, SSE, drift)
 
     def decide(
         self,
@@ -37,6 +43,7 @@ class DecisionService:
         actor: str,
         source_stream: str = "api",
         started_at: float | None = None,
+        drift_label: int | None = None,
     ) -> DecisionResponse:
         t0 = started_at if started_at is not None else time.perf_counter()
 
@@ -100,7 +107,12 @@ class DecisionService:
                 "source_stream": source_stream,
             },
         )
-        return to_response(decision, app_row)
+        response = to_response(decision, app_row)
+        if self.observer is not None:
+            # `drift_label` is the delayed ground truth the replay knows; it feeds the drift error stream only
+            # and is never persisted (only history loads persist labels).
+            self.observer(response, history=event.history, label=drift_label, source=source_stream)
+        return response
 
 
 def to_response(decision: Decision, app_row: Application) -> DecisionResponse:
