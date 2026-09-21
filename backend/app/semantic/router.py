@@ -11,13 +11,17 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.security import Principal, get_current_user
 from app.db.session import get_db
 from app.schemas.cases import SimilarCase, SimilarCasesResponse
+from app.schemas.common import ErrorResponse
 from app.semantic import repository
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
-MAX_K = 25
+# Matches the frozen contract in app/api/v1/_contract_stubs.py exactly. Do not widen: the stub
+# this router replaces advertises le=20 in docs/openapi.json.
+MAX_K = 20
 
 
 def _top_reason_texts(reason_codes) -> list[str]:
@@ -33,12 +37,14 @@ def _top_reason_texts(reason_codes) -> list[str]:
 @router.get(
     "/{decision_id}/similar",
     response_model=SimilarCasesResponse,
-    summary="Past cases whose narrative resembles this one",
+    responses={404: {"model": ErrorResponse}},
+    summary="Nearest past cases by narrative embedding",
 )
 def get_similar_cases(
     decision_id: uuid.UUID,
-    k: int = Query(5, ge=1, le=MAX_K, description="How many similar cases to return"),
+    k: int = Query(5, ge=1, le=MAX_K),
     db: Session = Depends(get_db),
+    user: Principal = Depends(get_current_user),
 ) -> SimilarCasesResponse:
     """Nearest case narratives by cosine similarity over the HNSW index.
 

@@ -1,0 +1,22 @@
+DECISION
+  id: {{ decision.id }}
+  score: {{ decision.score }} / 1000
+  band: {{ decision.band }}
+  outcome: {{ decision.decision }}
+  model version: {{ decision.model_version }}
+{% if decision.graph_uplift %}  score uplift from entity linkage: +{{ '%.2f'|format(decision.graph_uplift) }}
+{% endif %}
+REASON CODES (the only factors you may cite)
+{% for r in reasons %}  - {{ r.feature }}: {{ r.reason }}{% if r.ecoa_category %} [{{ r.ecoa_category }}]{% endif %}{% if r.contribution is not none %} (contribution {{ '%.4f'|format(r.contribution) }}){% endif %}
+{% else %}  (none recorded on this decision)
+{% endfor %}
+ENTITY LINKAGE
+{% if graph and graph.n_entities %}  {{ graph.n_entities }} identifiers on this application, {{ graph.n_shared }} of them shared with other applications, {{ graph.known_fraud_entities }} linked to confirmed fraud.
+{% else %}  No linkage information available.
+{% endif %}
+SIMILAR PAST CASES
+{% if similar %}{% for s in similar %}  - case {{ s.decision_id[:8] }}: score {{ s.score }} ({{ s.band }}), similarity {{ s.similarity }}
+{% endfor %}{% else %}  None found.
+{% endif %}
+ANALYST QUESTION
+  {{ question }}

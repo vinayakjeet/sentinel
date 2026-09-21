@@ -1,0 +1,7 @@
+{% if reasons -%}
+This application scored {{ decision.score }} out of 1000 and was placed in the {{ decision.band }} band{% if decision.decision %} ({{ decision.decision|lower|replace('_', ' ') }}){% endif %}. The factors that contributed most were: {% for r in reasons %}{{ r.reason|trim|trim('.')|lower }}{% if not loop.last %}; {% endif %}{% endfor %}.
+{%- else -%}
+This application scored {{ decision.score }} out of 1000 and was placed in the {{ decision.band }} band{% if decision.decision %} ({{ decision.decision|lower|replace('_', ' ') }}){% endif %}. No individual risk factors were recorded against it.
+{%- endif %}
+{%- if graph and graph.known_fraud_entities %} It also shares {{ graph.known_fraud_entities }} identifier{{ 's' if graph.known_fraud_entities > 1 else '' }} with applications already confirmed as fraudulent.{% endif %}
+ The language model is unavailable, so this summary is generated directly from the decision record.

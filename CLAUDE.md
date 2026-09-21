@@ -46,5 +46,5 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
   /adverse-action. Other routes return 501 until built. SSE auth: GET /stream?token=<jwt>. Lane B: use app/schemas/cases.py + copilot.py
   in your routers (don't redefine). Sample payload: backend/tests/fixtures/application.json. Next: A3 real scoring (waiting on ml/).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
-- Lane B: B5 semantic layer written (embedder, narrative, migration 0003, router, backfill); awaiting Postgres to verify. ACTION: backend/requirements.txt ML pins are stale - see docs/PLAN-B.md section 3.
+- Lane B: B6 LLM copilot done (28 tests pass, live Groq verified). NOTE: llama-3.3-70b-versatile is decommissioned - default now openai/gpt-oss-120b. Next: B4/B5v, blocked on Postgres + A4.
 - Lane F: not started
