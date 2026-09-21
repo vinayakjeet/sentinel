@@ -1,0 +1,95 @@
+# Generated from ml/reason_codes.py - edit that module, not this file.
+# 31 features, validated against features.json at train time.
+bank_branch_count_8w:
+  ecoa_category: Insufficient bank references
+  reason: An unusually high number of recent applications at the same bank branch.
+bank_months_count:
+  ecoa_category: Insufficient bank references
+  reason: Short banking relationship history with this institution.
+bank_months_count_missing:
+  ecoa_category: Insufficient bank references
+  reason: No existing banking relationship could be found for the applicant.
+credit_risk_score:
+  ecoa_category: Credit history
+  reason: The internal credit risk score for this application.
+current_address_months_count:
+  ecoa_category: Length of residence
+  reason: Short length of time at the current address.
+current_address_months_count_missing:
+  ecoa_category: Length of residence
+  reason: No history for the current address was supplied with the application.
+date_of_birth_distinct_emails_4w:
+  ecoa_category: Unable to verify identity
+  reason: Several different email addresses have recently been used with this date of birth.
+days_since_request:
+  ecoa_category: Application characteristics
+  reason: The time between the initial enquiry and this application being submitted.
+device_distinct_emails_8w:
+  ecoa_category: Unable to verify identity
+  reason: Several different email addresses have recently been used from this device.
+device_distinct_emails_8w_missing:
+  ecoa_category: Unable to verify identity
+  reason: No email history was available for the device used to apply.
+device_os:
+  ecoa_category: Other - application channel and device
+  reason: The operating system of the device used to apply.
+email_is_free:
+  ecoa_category: Other - application channel and device
+  reason: The application used a free email provider rather than a personal or work domain.
+foreign_request:
+  ecoa_category: Other - application channel and device
+  reason: The application was submitted from outside the expected country.
+has_other_cards:
+  ecoa_category: Insufficient bank references
+  reason: No other card accounts are held with this institution.
+housing_status:
+  ecoa_category: Length of residence
+  reason: The housing status recorded on the application.
+intended_balcon_amount:
+  ecoa_category: Application characteristics
+  reason: The balance transfer amount requested on this application.
+keep_alive_session:
+  ecoa_category: Other - application channel and device
+  reason: The online session behaved differently from a typical genuine application.
+name_email_similarity:
+  ecoa_category: Unable to verify identity
+  reason: The name on the application does not closely match the email address supplied.
+payment_type:
+  ecoa_category: Application characteristics
+  reason: The payment type selected on the application.
+phone_home_valid:
+  ecoa_category: Unable to verify identity
+  reason: The home telephone number provided could not be verified.
+phone_mobile_valid:
+  ecoa_category: Unable to verify identity
+  reason: The mobile telephone number provided could not be verified.
+prev_address_months_count:
+  ecoa_category: Length of residence
+  reason: Little recorded history at the previous address given.
+prev_address_months_count_missing:
+  ecoa_category: Length of residence
+  reason: No previous address history was supplied with the application.
+proposed_credit_limit:
+  ecoa_category: Application characteristics
+  reason: The credit limit requested on this application.
+session_length_in_minutes:
+  ecoa_category: Other - application channel and device
+  reason: The length of the online session was unusual for a genuine application.
+session_length_in_minutes_missing:
+  ecoa_category: Other - application channel and device
+  reason: The length of the online application session could not be measured.
+source:
+  ecoa_category: Other - application channel and device
+  reason: The channel through which the application was received.
+velocity_24h:
+  ecoa_category: Application characteristics
+  reason: An unusually high number of applications received in the last day.
+velocity_4w:
+  ecoa_category: Application characteristics
+  reason: An unusually high number of applications received over the last few weeks.
+velocity_6h:
+  ecoa_category: Application characteristics
+  reason: An unusually high number of applications received in the last few hours.
+zip_count_4w:
+  ecoa_category: Application characteristics
+  reason: An unusually high number of recent applications from the same postal area.

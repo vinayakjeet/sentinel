@@ -224,7 +224,7 @@ fallback still get built and tested regardless — `test_fallback_when_llm_down`
 
 - [x] B0 bootstrap
 - [x] B1 prepare_data
-- [ ] B2 featurize + train + artifacts ⚑
+- [x] B2 featurize + train + artifacts ⚑
 - [ ] B3 reason codes + fairness + model card
 - [ ] B5 semantic layer (build)
 - [ ] B4 load demo DB + hero cases

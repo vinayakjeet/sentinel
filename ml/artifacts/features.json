@@ -1,0 +1,120 @@
+{
+  "feature_order": [
+    "name_email_similarity",
+    "prev_address_months_count",
+    "current_address_months_count",
+    "days_since_request",
+    "intended_balcon_amount",
+    "zip_count_4w",
+    "velocity_6h",
+    "velocity_24h",
+    "velocity_4w",
+    "bank_branch_count_8w",
+    "date_of_birth_distinct_emails_4w",
+    "credit_risk_score",
+    "email_is_free",
+    "phone_home_valid",
+    "phone_mobile_valid",
+    "bank_months_count",
+    "has_other_cards",
+    "proposed_credit_limit",
+    "foreign_request",
+    "session_length_in_minutes",
+    "keep_alive_session",
+    "device_distinct_emails_8w",
+    "prev_address_months_count_missing",
+    "current_address_months_count_missing",
+    "bank_months_count_missing",
+    "session_length_in_minutes_missing",
+    "device_distinct_emails_8w_missing",
+    "payment_type",
+    "housing_status",
+    "source",
+    "device_os"
+  ],
+  "n_features": 31,
+  "numeric": [
+    "name_email_similarity",
+    "prev_address_months_count",
+    "current_address_months_count",
+    "days_since_request",
+    "intended_balcon_amount",
+    "zip_count_4w",
+    "velocity_6h",
+    "velocity_24h",
+    "velocity_4w",
+    "bank_branch_count_8w",
+    "date_of_birth_distinct_emails_4w",
+    "credit_risk_score",
+    "email_is_free",
+    "phone_home_valid",
+    "phone_mobile_valid",
+    "bank_months_count",
+    "has_other_cards",
+    "proposed_credit_limit",
+    "foreign_request",
+    "session_length_in_minutes",
+    "keep_alive_session",
+    "device_distinct_emails_8w"
+  ],
+  "missing_flags": [
+    "prev_address_months_count_missing",
+    "current_address_months_count_missing",
+    "bank_months_count_missing",
+    "session_length_in_minutes_missing",
+    "device_distinct_emails_8w_missing"
+  ],
+  "categorical": [
+    "payment_type",
+    "housing_status",
+    "source",
+    "device_os"
+  ],
+  "category_levels": {
+    "payment_type": [
+      "AA",
+      "AB",
+      "AC",
+      "AD",
+      "AE"
+    ],
+    "housing_status": [
+      "BA",
+      "BB",
+      "BC",
+      "BD",
+      "BE",
+      "BF",
+      "BG"
+    ],
+    "source": [
+      "INTERNET",
+      "TELEAPP"
+    ],
+    "device_os": [
+      "linux",
+      "macintosh",
+      "other",
+      "windows",
+      "x11"
+    ]
+  },
+  "sentinel_value": -1,
+  "sentinel_columns": [
+    "prev_address_months_count",
+    "current_address_months_count",
+    "bank_months_count",
+    "session_length_in_minutes",
+    "device_distinct_emails_8w"
+  ],
+  "excluded_protected_attributes": [
+    "customer_age",
+    "employment_status",
+    "income"
+  ],
+  "excluded_other": {
+    "month": "temporal split key, not a feature",
+    "device_fraud_count": "constant 0 across all 1,000,000 rows, no signal",
+    "fraud_bool": "label"
+  }
+}

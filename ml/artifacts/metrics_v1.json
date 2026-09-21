@@ -1,0 +1,73 @@
+{
+  "model_version": "v1",
+  "generated_at": "2026-09-21T08:37:32+00:00",
+  "data": {
+    "train_rows": 794989,
+    "test_rows": 205011,
+    "fit_months": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "validation_month": 5,
+    "test_months": [
+      6,
+      7
+    ],
+    "train_fraud_rate": 0.010252972053701372,
+    "test_fraud_rate": 0.014038271117159567,
+    "split": "temporal (DESIGN section 2) - never random"
+  },
+  "lightgbm": {
+    "best_iteration": 185,
+    "scale_pos_weight": 99.24718100890207,
+    "val_pr_auc": 0.17582403597618773,
+    "early_stopping": "patience 100 on month 5 PR-AUC, LightGBM default metric disabled"
+  },
+  "blend": {
+    "w_supervised": 0.75,
+    "w_anomaly": 0.25
+  },
+  "n_features": 31,
+  "excluded_protected_attributes": [
+    "customer_age",
+    "employment_status",
+    "income"
+  ],
+  "test_metrics": {
+    "baseline": {
+      "model": "baseline",
+      "roc_auc": 0.6850895166564915,
+      "pr_auc": 0.02427463556614625,
+      "precision_at_100": 0.04,
+      "recall_at_1pct_fpr": 0.002432244614315497
+    },
+    "lightgbm": {
+      "model": "lightgbm",
+      "roc_auc": 0.8764781853787866,
+      "pr_auc": 0.16681016803308807,
+      "precision_at_100": 0.55,
+      "recall_at_1pct_fpr": 0.226546212647672
+    },
+    "iforest": {
+      "model": "iforest",
+      "roc_auc": 0.5855048076956961,
+      "pr_auc": 0.019880101882342002,
+      "precision_at_100": 0.06,
+      "recall_at_1pct_fpr": 0.0236275191104934
+    },
+    "blend": {
+      "model": "blend",
+      "roc_auc": 0.8726416781701404,
+      "pr_auc": 0.15960154442334085,
+      "precision_at_100": 0.48,
+      "recall_at_1pct_fpr": 0.22967338429464906
+    }
+  },
+  "fairness": {
+    "status": "pending",
+    "note": "written by ml/fairness.py in task B3"
+  }
+}
