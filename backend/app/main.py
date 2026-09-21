@@ -9,6 +9,7 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import setup_logging
 from app.core.middleware import RequestIdMiddleware
+from app.services.container import build_services
 
 settings = get_settings()
 setup_logging(settings.log_level)
@@ -17,7 +18,8 @@ logger = logging.getLogger("app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    logger.info("startup", extra={"env": settings.app_env})
+    app.state.services = build_services(settings)
+    logger.info("startup", extra={"env": settings.app_env, "model_version": app.state.services.scorer.model_version})
     yield
     logger.info("shutdown")
 

@@ -26,9 +26,11 @@ class RequestIdMiddleware:
         incoming = dict(scope["headers"]).get(b"x-request-id", b"").decode("latin-1")
         request_id = incoming if _VALID_ID.match(incoming) else uuid.uuid4().hex
         token = request_id_ctx.set(request_id)
-        scope.setdefault("state", {})["request_id"] = request_id
         status = 500
         start = time.perf_counter()
+        state = scope.setdefault("state", {})
+        state["request_id"] = request_id
+        state["t0"] = start  # decision latency_ms is measured from here
 
         async def send_wrapper(message: Message) -> None:
             nonlocal status
