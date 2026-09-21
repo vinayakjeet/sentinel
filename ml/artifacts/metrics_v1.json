@@ -67,7 +67,72 @@
     }
   },
   "fairness": {
-    "status": "pending",
-    "note": "written by ml/fairness.py in task B3"
+    "status": "measured",
+    "generated_at": "2026-09-21T08:40:22+00:00",
+    "evaluated_on": "test.parquet (months 6-7)",
+    "score_used": "blended score, before graph uplift (uplift is applied in the backend)",
+    "approve_threshold": 300,
+    "decline_threshold": 850,
+    "protected_attribute": "customer_age",
+    "note": "customer_age is NOT a model feature (CLAUDE.md invariant 5); it is used here for evaluation only. BAF bands age by decade, so DESIGN's <25/25-50/>50 buckets are mapped to <=20 / 30-50 / >=60.",
+    "age_group_definitions": {
+      "<25 (age band <= 20)": {
+        "min": 0,
+        "max": 20
+      },
+      "25-50 (age bands 30-50)": {
+        "min": 30,
+        "max": 50
+      },
+      ">50 (age band >= 60)": {
+        "min": 60,
+        "max": 200
+      }
+    },
+    "overall": {
+      "n": 205011,
+      "fraud_rate": 0.014038271117159567,
+      "approval_rate": 0.7789777133909888,
+      "decline_rate": 0.0008877572422943159,
+      "fpr_at_decline": 0.0005046182464021213,
+      "tpr_at_decline": 0.02779708130646282,
+      "mean_score": 211.04207091326808
+    },
+    "by_age_group": {
+      "<25 (age band <= 20)": {
+        "n": 51437,
+        "fraud_rate": 0.006435056476855182,
+        "approval_rate": 0.8561735715535509,
+        "decline_rate": 0.00021385384062056495,
+        "fpr_at_decline": 0.00013697021876100653,
+        "tpr_at_decline": 0.012084592145015106,
+        "mean_score": 168.38347881874915
+      },
+      "25-50 (age bands 30-50)": {
+        "n": 145471,
+        "fraud_rate": 0.015040798509668593,
+        "approval_rate": 0.760667074537193,
+        "decline_rate": 0.0009348942400890899,
+        "fpr_at_decline": 0.0005164604314538361,
+        "tpr_at_decline": 0.0283363802559415,
+        "mean_score": 220.88977871878242
+      },
+      ">50 (age band >= 60)": {
+        "n": 8103,
+        "fraud_rate": 0.04430457855115389,
+        "approval_rate": 0.6176724669875355,
+        "decline_rate": 0.004319387881031716,
+        "fpr_at_decline": 0.0027117768595041323,
+        "tpr_at_decline": 0.03899721448467967,
+        "mean_score": 305.041095890411
+      }
+    },
+    "disparity": {
+      "fpr_ratio_worst_over_best": 19.798295454545457,
+      "fpr_worst_group": ">50 (age band >= 60)",
+      "fpr_best_group": "<25 (age band <= 20)",
+      "approval_rate_ratio_lowest_over_highest": 0.7214336993219161,
+      "four_fifths_rule_met": false
+    }
   }
 }

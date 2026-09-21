@@ -46,5 +46,5 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
   /adverse-action. Other routes return 501 until built. SSE auth: GET /stream?token=<jwt>. Lane B: use app/schemas/cases.py + copilot.py
   in your routers (don't redefine). Sample payload: backend/tests/fixtures/application.json. Next: A3 real scoring (waiting on ml/).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
-- Lane B: B2 DONE - ml/featurize.py + all 8 ml/artifacts/ live (LGBM ROC-AUC 0.877, PR-AUC 0.167 vs rules 0.685/0.024). Next: B3 fairness + model card.
+- Lane B: B3 done (reason-code tests 9 pass, fairness measured, model card). Artifacts live since 15:00. Next: B5 semantic layer.
 - Lane F: not started
