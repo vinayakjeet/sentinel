@@ -231,5 +231,5 @@ fallback still get built and tested regardless — `test_fallback_when_llm_down`
 - [ ] B5v semantic verification (ring top-5)
 - [x] B6 LLM layer (Opus)
 - [ ] R1 audit (Opus)
-- [ ] R2 tests + CI
+- [x] R2 tests + CI (workflow written; needs a real run to call green)
 - [ ] R3 docs
