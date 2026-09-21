@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import random
+import secrets
 import threading
 from collections.abc import Iterator
 from pathlib import Path
@@ -51,6 +52,29 @@ def fraud_wave_rows(path: Path, fraud_rate: float, seed: int) -> Iterator[Row]:
             yield rng.choice(frauds) if rng.random() < fraud_rate else row
 
 
+def namespace_identifiers(record: dict, ns: int) -> dict:
+    """Give one replay pass its own set of entities.
+
+    The synthetic identifiers are drawn from finite pools, so without this a replayed row lands on the same
+    device/email/phone/address as the 40,000 loaded decisions and as every earlier pass over the same file
+    (the stream restarts at row 0 whenever the API restarts or the source is switched). Each pass then links to
+    all of them: measured, replay rows averaged +0.17 graph uplift and 38% approvals, against ~0 and ~75% on
+    the first pass over an empty database, and the same rows drifted upward with every rehearsal. The stream is a
+    simulated population, so it gets a fresh identifier space per pass; the loaded history and its rings are untouched.
+    """
+    out = dict(record)
+    out["device_id"] = f"NS{ns}-{out['device_id']}"
+    out["email"] = f"ns{ns}.{out['email']}"
+    out["phone"] = f"+{ns:06d}{str(out['phone']).lstrip('+')}"  # digits only, and a different length from the loaded 12
+    out["address"] = f"{ns:06d} {out['address']}"
+    # An IP has to stay a valid IP: move it from the loaded 10.x.x.x space into a per-pass IPv6 unique-local range.
+    octets = str(out["ip"]).split(".")
+    if len(octets) == 4:
+        hextets = ":".join(f"{int(o):x}" for o in octets)
+        out["ip"] = f"fd00:{ns & 0xFFFF:x}:{hextets}::"
+    return out
+
+
 class ReplayService:
     def __init__(self, settings: Settings, decisions: DecisionService, broadcaster: Broadcaster) -> None:
         self.s = settings
@@ -61,6 +85,7 @@ class ReplayService:
         self.invalid_rows = 0
         self._count_lock = threading.Lock()
         self._rows: Iterator[Row] | None = None
+        self._ns = secrets.randbelow(10**6)
         self._task: asyncio.Task | None = None
 
     @property
@@ -87,6 +112,7 @@ class ReplayService:
     async def start(self) -> StreamStatus:
         if not self.running:
             if self._rows is None:
+                self._ns = secrets.randbelow(10**6)
                 self._rows = await asyncio.to_thread(self._open, self.source)
             self._task = asyncio.create_task(self._run(), name="replay")
             logger.info("replay started", extra={"source": self.source})
@@ -105,7 +131,7 @@ class ReplayService:
 
     async def switch(self, source: StreamSource) -> StreamStatus:
         rows = await asyncio.to_thread(self._open, source)  # may scan the file for fraud rows: off the loop
-        self.source, self._rows = source, rows
+        self.source, self._rows, self._ns = source, rows, secrets.randbelow(10**6)
         logger.info("replay source switched", extra={"source": source, "fraud_rate": self.s.replay_shift_fraud_rate})
         return self.status()
 
@@ -143,6 +169,7 @@ class ReplayService:
     def _decide(self, idx: int, record: dict, source: str) -> None:
         label = int(record.pop("fraud_bool"))
         try:
+            record = namespace_identifiers(record, self._ns)
             event = ApplicationEvent.model_validate({**record, "external_ref": f"{source}-{idx}"})
         except ValidationError as exc:
             with self._count_lock:

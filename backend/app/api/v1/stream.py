@@ -95,6 +95,10 @@ async def start_stream(
     services: Services = Depends(get_services),
     db: Session = Depends(get_db),
 ) -> StreamStatus:
+    if not services.replay.running:
+        # A new replay run is a new stream. Comparing its first events with the tail of the previous run (say a
+        # shifted stream that was stopped without a reset) reads as drift and fires within seconds of pressing Start.
+        services.drift.monitor.reset()
     status = await services.replay.start()
     _audit(db, user, "stream.start", {"source": status.source})
     return status

@@ -51,6 +51,10 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
   (SSE: ?token=). Analyst = read; admin = + /stream/start|stop|switch, /metrics/drift/reset. Tokens last 60 min: long
   loads must re-login on 401. Rate limits per user: 600/min default, 3000/min POST /decisions/application, login 10/min/IP.
   CORS allows http://localhost:5173. R1 handover items 1-4 all done. Next: A7 (Lane F integration).
+  A7 DONE (22 Sep, final QA by a single writer; Lane A stopped, lane restriction lifted for all folders): replay identifiers are
+  now namespaced per pass (replay rows no longer link to the 40k history or earlier passes; before: 0.17 avg uplift, 38% approve,
+  now ~0 and ~77%); Start replay clears the ADWIN window; copilot output check + recorded-graph-signals-only prompt; Groq
+  max_tokens 500 -> 2000 (reasoning model was running out, HTTP 400). 133 backend tests green. API contract unchanged (openapi.json frozen, 18 routes).
   WSL note: Docker lives in WSL Ubuntu; a detached `wsl.exe … sleep infinity` keepalive stops the distro idling out. After a reboot or `wsl --shutdown`, ask Lane A to restart it.
 - Lane B: B0-B6, R1-R3 ALL DONE. R1's four Lane A items are verified closed (pins, A6 auth, router wiring, alembic import).
   B4 DONE: 40,000 demo decisions loaded through the API at 15 req/s. All 4 planted rings found (components 21/24/19/15),
@@ -67,4 +71,6 @@ One line: "Switch to Opus for <task> — <reason>." Then wait.
   ml tests. main is PUSHED to github.com/vinayakjeet/sentinel (20 commits of all three lanes, human-approved).
   R3 DONE: README.md with architecture Mermaid, quickstart, demo script, real metrics, and the three required
   disclosures (synthetic identifiers/rings, 40k subset, REPLAY_SHIFT_FRAUD_RATE fraud wave). responsible-ai.md updated.
-- Lane F: not started
+  FINAL QA 22 Sep: see docs/morning-report.md (bugs fixed, what is still broken, pre-recording steps). docs/screenshots/ has the 4 deck
+  PNGs. ml/scripts/purge_replay.py (delete the ~53k old replay rows) is written but NOT RUN: it needs the human's OK.
+- Lane F: F1 (login, live stream, alert queue) and F2 (case detail, model health) DONE; `npm run build` (tsc + vite) green; all five screens walked in headless Chrome as admin and analyst.

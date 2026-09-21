@@ -253,3 +253,116 @@ def test_unknown_decision_returns_a_plain_answer(stub_tools):
     assert result.blocked is False
     assert result.fallback_used is False
     assert "No decision" in result.answer
+
+
+# ---------------------------------------------------------------------------------------------
+# claims the record cannot back (demo-027088: "the credit risk score was low")
+# ---------------------------------------------------------------------------------------------
+HERO_REASONS = [
+    {"feature": "device_os", "reason": "The operating system of the device used to apply."},
+    {"feature": "housing_status", "reason": "The housing status recorded on the application."},
+    {"feature": "credit_risk_score", "reason": "The internal credit risk score for this application."},
+    {"feature": "current_address_months_count", "reason": "Short length of time at the current address."},
+]
+HERO_KNOWN = (
+    "score: 863 / 1000\n  score uplift from entity linkage: +0.30\n"
+    "  - confirmed-fraud applications within 2 hops: 8"
+)
+
+
+def _claims(answer, *, linkage=True, known_fraud=True):
+    return guardrails.unsupported_claims(
+        answer, HERO_REASONS, known_text=HERO_KNOWN, linkage=linkage, known_fraud=known_fraud
+    )
+
+
+@pytest.mark.parametrize("answer", [
+    "The internal credit risk score was low.",
+    "A low internal credit risk score pushed the decision.",
+    "The housing status and a poor credit risk score contributed.",
+    "The device operating system was unusual.",
+])
+def test_value_judgements_the_reason_code_does_not_make_are_rejected(answer):
+    assert _claims(answer)
+
+
+@pytest.mark.parametrize("answer", [
+    "The device operating system, the housing status and the internal credit risk score contributed.",
+    "A short time at the current address contributed, alongside the housing status.",
+    "The application scored 863 with an uplift of 0.30 and 8 confirmed-fraud applications within 2 hops.",
+])
+def test_answers_grounded_in_the_record_pass(answer):
+    assert _claims(answer) == []
+
+
+def test_numbers_absent_from_the_record_are_rejected():
+    assert _claims("The score was 950.") == ["number 950 is not in the decision record"]
+
+
+def test_graph_claims_need_graph_evidence():
+    assert _claims("It shares a device with applications confirmed as fraud.", linkage=False, known_fraud=False)
+    assert _claims("It is linked to confirmed fraud.", known_fraud=False)
+    assert _claims("There is no link to confirmed fraud.", known_fraud=False) == []
+
+
+def test_fallback_when_answer_makes_an_unsupported_value_judgement(stub_tools):
+    """Well-formed JSON, only real reason codes cited, and still discarded: the record cannot back it."""
+    payload = json.dumps({
+        "answer": "The previous address history was limited, and the device saw several emails.",
+        "cited_reasons": ["prev_address_months_count", "device_distinct_emails_8w"],
+    })
+    result = service.ask(DECISION_ID, "Why was this flagged?", provider=FakeProvider(payload))
+    assert result.fallback_used is True
+    assert "limited" not in result.answer
+
+
+def test_grounded_answer_is_not_replaced(stub_tools):
+    payload = json.dumps({
+        "answer": "Little recorded history at the previous address contributed most, with several "
+                  "different email addresses on the device. The score is 812.",
+        "cited_reasons": ["prev_address_months_count", "device_distinct_emails_8w"],
+    })
+    result = service.ask(DECISION_ID, "Why was this flagged?", provider=FakeProvider(payload))
+    assert result.fallback_used is False
+
+
+def test_graph_signals_reach_the_model(stub_tools):
+    provider = FakeProvider(json.dumps({"answer": "Address history contributed.", "cited_reasons": []}))
+    service.ask(DECISION_ID, "Why was this flagged?", provider=provider)
+    assert "applications in the linked cluster: 12" in provider.calls[0]["user"]
+    assert "confirmed-fraud applications within 2 hops: 2" in provider.calls[0]["user"]
+
+
+def test_fallback_reports_recorded_graph_signals_not_the_live_graph(stub_tools, monkeypatch):
+    """The live graph says 1 fraud-flagged identifier; the record says no fraud within 2 hops."""
+    clean = dict(DECISION, graph_signals={"component_size": 1, "known_fraud_2hop": 0})
+    monkeypatch.setattr(service.tools, "call", lambda name, **kw: (
+        clean if name == "get_decision" else
+        {"entities": [], "n_entities": 3, "n_shared": 2, "known_fraud_entities": 1}
+        if name == "get_entity_graph" else []))
+    result = service.ask(DECISION_ID, "Why?", provider=NullProvider())
+    assert "fraud" not in result.answer.lower()
+
+
+def test_fallback_states_the_recorded_fraud_link(stub_tools):
+    result = service.ask(DECISION_ID, "Why?", provider=NullProvider())
+    assert "2 confirmed-fraud applications within 2 hops" in result.answer
+
+
+def test_answer_claiming_fraud_the_record_does_not_show_is_replaced(stub_tools, monkeypatch):
+    clean = dict(DECISION, graph_signals={"component_size": 1, "known_fraud_2hop": 0})
+    monkeypatch.setattr(service.tools, "call", lambda name, **kw: clean if name == "get_decision" else [])
+    payload = json.dumps({"answer": "Address history contributed and it is linked to confirmed fraud.",
+                          "cited_reasons": ["prev_address_months_count"]})
+    result = service.ask(DECISION_ID, "Why?", provider=FakeProvider(payload))
+    assert result.fallback_used is True
+
+
+def test_unlinked_application_gets_no_graph_bookkeeping(stub_tools, monkeypatch):
+    """Counts such as '1 name per device' are not evidence; the model must not be handed them."""
+    clean = dict(DECISION, graph_signals={"component_size": 1, "distinct_names_per_device": 1, "known_fraud_2hop": 0})
+    monkeypatch.setattr(service.tools, "call", lambda name, **kw: clean if name == "get_decision" else [])
+    provider = FakeProvider(json.dumps({"answer": "Address history contributed.", "cited_reasons": []}))
+    service.ask(DECISION_ID, "Why?", provider=provider)
+    assert "names seen on this device" not in provider.calls[0]["user"]
+    assert "none recorded" in provider.calls[0]["user"]

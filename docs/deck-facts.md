@@ -177,7 +177,7 @@ Say: similarity finds cases that look alike; the graph finds cases that are conn
 |---|---|---|
 | backend tests in CI | 106 passing | CI run 35601969812, pytest progress dots |
 | ml tests | 9 passing (`test_reason_codes.py`) | CI + local |
-| backend tests added since that run | 5 (`test_semantic_centering.py`), pass locally, not yet in a CI run | local |
+| backend tests, final QA pass (22 Sep) | 133 passing in the api container (`docker compose exec api python -m pytest tests`), incl. 5 semantic-centering, 16 new copilot-claim/graph-signal tests, replay-isolation and detector-reset tests | local; CI run pending, see morning report |
 | LLM-layer tests (audit R1) | 19 pass, incl. `test_llm_cannot_mutate_decision`, `test_injection_blocked`, `test_pii_redacted`, `test_fallback_when_llm_down` | `docs/audit-R1.md` |
 | secret scan | gitleaks 8.30.1, full history, no leaks | README §8 |
 | lint | `ruff check` clean on backend + ml; CI log shows "Would reformat" lines for the format check | CI log |
@@ -195,7 +195,26 @@ Say: similarity finds cases that look alike; the graph finds cases that are conn
 | of which replay stream, probes, tests | remainder (includes 30 `idle-probe-*`) |
 | drift events | 3 |
 
-## 12. Disclosures that must appear in the deck
+## 12. Final QA pass (22 Sep, headless Chrome, admin, `http://localhost:5173`)
+
+Measured by driving the UI, on the build that includes the replay-isolation fix (each replay pass gets its own identifiers).
+
+| item | value | source |
+|---|---|---|
+| drift fired after Switch stream source to shifted | 7.7, 7.7, 7.1, 10.3, 6.1, 9.7 s (six runs; 0.5 s polling of the banner) | `docs/morning-report.md` |
+| thresholds on drift | 300 / 650 / 850 → 225 / 575 / 775, every run | Model health |
+| drift after Reset drift button, shifted stream still running | did not re-fire in 40 to 60 s | QA run |
+| base stream, fresh pass, 25 s in (about 730 decisions) | approve 78%, step up 16%, review 7%, decline 0% | Live stream header |
+| live latency, Model health, replay running at 24 to 31 decisions/s | p50 28 to 38 ms, p95 37 to 87 ms, p99 43 to 103 ms | Model health |
+| stream rows' linked applications / graph uplift | 1 / none on nearly every row | Live stream table |
+| **before the replay fix**, same rows in the database | average graph uplift 0.166, 38% approve, component size 9 to 11 on rows seen for the first time after the 40,000-row load | SQL over `decisions` |
+| copilot on hero 1, "Why was this application flagged?" | names the four recorded reasons as *contributing*; no value judgement the reason text does not make | `test_llm_guardrails.py`, QA run |
+| Groq call failures traced | 400 `json_validate_failed` (reasoning model exhausted `max_tokens=500`, about 1 call in 8): fixed by raising the budget to 2000. 429 rate limit after about 10 calls in 30 s: not fixable, so the templated answer shows | container logs |
+
+Screenshots for the deck are in `docs/screenshots/`: `live-stream.png`, `case-detail-027088.png` (and `-graph.png`, a native-scale crop of the graph),
+`model-health-drift.png`, `openapi-docs.png`. The last three were rendered at a larger CSS viewport and scaled to 1600x900 so the whole page fits.
+
+## 13. Disclosures that must appear in the deck
 
 | # | disclosure |
 |---|---|

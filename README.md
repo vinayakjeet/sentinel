@@ -292,6 +292,11 @@ rows are fraud**, against roughly 1% naturally. Those fraud rows are sampled **w
 the variant file's own fraud rows**, so they are real applications, repeated — not fabricated ones.
 Set `REPLAY_SHIFT_FRAUD_RATE=0` to replay Variant II exactly as it is.
 
+Each replay pass also gets its own set of synthetic identifiers (device, email, phone, address, IP), so replayed applications never
+link to the 40,000 loaded decisions, to the planted rings, or to an earlier pass over the same file. Without that, the stream
+restarts at row 0 whenever the API restarts or the source is switched, every pass links to the last, and the live feed drifts
+toward "everything is linked" (measured: 0.17 average graph uplift and 38% approvals, against about 0 and 75%).
+
 Why: ADWIN on a realistic 1% wave needs tens of thousands of events to reach significance, which is
 not a live demo. The detector, the delayed-label error stream, the tightening logic and the audit
 trail are all unmodified — only the arrival rate of fraud is amplified.

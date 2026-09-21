@@ -24,7 +24,10 @@ class LLMSettings(BaseSettings):
     groq_base_url: str = "https://api.groq.com/openai/v1"
 
     llm_timeout_seconds: float = 12.0
-    llm_max_tokens: int = 500
+    # The reply is capped at ~120 words by the prompt, but openai/gpt-oss-120b is a reasoning model and its hidden
+    # reasoning tokens count against this budget. At 500, about one call in eight ran out before finishing the JSON
+    # and Groq answered HTTP 400 json_validate_failed (measured), which silently became the templated fallback.
+    llm_max_tokens: int = 2000
     llm_temperature: float = 0.1
 
     # Guardrails

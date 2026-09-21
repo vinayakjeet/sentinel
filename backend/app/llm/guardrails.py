@@ -157,3 +157,96 @@ def mentions_foreign_reason(answer: str, allowed: set[str], universe: set[str]) 
         if re.search(rf"\b{re.escape(feature)}\b", answer, re.IGNORECASE):
             return True
     return False
+
+
+# --------------------------------------------------------------------------------------------
+# output: claims that the decision record does not support
+# --------------------------------------------------------------------------------------------
+# A reason code says a factor CONTRIBUTED to the risk score. It does not record the applicant's value
+# for that factor, so "the credit risk score was low" is a claim the record cannot back (and for a
+# risk score is the wrong way round). Value judgements are therefore only allowed where the
+# reason's own wording makes them.
+VALUE_QUALIFIERS = frozenset({
+    "low", "high", "poor", "weak", "strong", "good", "bad", "elevated", "excessive", "unusually",
+    "unusual", "short", "long", "brief", "limited", "thin", "little", "minimal", "recent", "new",
+    "old", "large", "small", "many", "few", "several", "frequent", "rare",
+})
+_QUALIFIER_WINDOW = 4          # words between a value judgement and the factor it is about
+_NUMBER = re.compile(r"(?<![\w.])\d[\d,]*(?:\.\d+)?")
+_WORD = re.compile(r"[a-z0-9']+")
+_NEGATION = re.compile(r"\b(?:no|not|none|without|never|neither|nor)\b[^.;]{0,25}$", re.IGNORECASE)
+_FRAUD_CLAIM = re.compile(
+    r"\b(?:confirmed|known|previously)\s+(?:as\s+)?fraud\w*|\blinked\s+to\s+fraud\w*|\bfraud\s+ring\b", re.IGNORECASE)
+_LINKAGE_CLAIM = re.compile(
+    r"\b(?:shares?|shared|sharing)\s+(?:a|an|the|its)?\s*(?:device|phone|email|address|identifier)|"
+    r"\b(?:cluster|ring|network)\s+of\b|\blinked\s+(?:applications|to\s+other)", re.IGNORECASE)
+_COUNT_SUFFIX = re.compile(r"^(?:count|months|days|num|\d+[hdwm])$")
+
+
+def _topic_phrases(entry: dict) -> list[list[str]]:
+    """Word sequences that name a reason's factor in prose: from its key and from its wording."""
+    key_words = [
+        "previous" if w == "prev" else w
+        for w in str(entry.get("feature", "")).lower().split("_")
+        if w and not _COUNT_SUFFIX.match(w)
+    ]
+    phrases = [key_words] if key_words else []
+    m = re.match(r"\s*(?:the\s+)?(.+?)\s+(?:of|for|recorded|used|on|in|from)\b", str(entry.get("reason", "")), re.I)
+    if m:
+        subject = _WORD.findall(m.group(1).lower())
+        if 1 < len(subject) <= 5:
+            phrases.append(subject)
+    return phrases
+
+
+def _find_phrase(tokens: list[str], phrase: list[str]) -> list[tuple[int, int]]:
+    n = len(phrase)
+    return [(i, i + n - 1) for i in range(len(tokens) - n + 1) if tokens[i:i + n] == phrase]
+
+
+def unsupported_claims(
+    answer: str,
+    reasons: list[dict],
+    *,
+    known_text: str,
+    linkage: bool,
+    known_fraud: bool,
+) -> list[str]:
+    """Return a description of every claim in `answer` that the decision record cannot back.
+
+    * a value judgement (low, high, short, ...) attached to a reason's factor, where no reason
+      whose factor is named nearby uses that word itself;
+    * a number that appears nowhere in the context the model was given;
+    * confirmed-fraud or shared-identifier claims when the graph shows none.
+    """
+    problems: list[str] = []
+    reason_words = [set(_WORD.findall(str(r.get("reason", "")).lower())) for r in reasons]
+    topics = [(idx, p) for idx, r in enumerate(reasons) for p in _topic_phrases(r)]
+
+    for clause in re.split(r"[.;:!?\n,]", answer.lower()):
+        tokens = _WORD.findall(clause)
+        spans = [(idx, span) for idx, phrase in topics for span in _find_phrase(tokens, phrase)]
+        for i, tok in enumerate(tokens):
+            if tok not in VALUE_QUALIFIERS:
+                continue
+            near = [
+                idx for idx, (a, b) in spans
+                if (a - i - 1 if a > i else i - b - 1) <= _QUALIFIER_WINDOW and not (a <= i <= b)
+            ]
+            if near and not any(tok in reason_words[idx] for idx in near):
+                factor = str(reasons[near[0]].get("feature", "")).replace("_", " ")
+                problems.append(f"'{tok}' applied to {factor}: the reason code does not say so")
+
+    supported = {n.replace(",", "") for n in _NUMBER.findall(known_text)}
+    for num in _NUMBER.findall(answer):
+        if num.replace(",", "").rstrip(".") not in supported:
+            problems.append(f"number {num} is not in the decision record")
+
+    def _affirmed(pattern: re.Pattern[str]) -> bool:
+        return any(not _NEGATION.search(answer[:m.start()]) for m in pattern.finditer(answer))
+
+    if not known_fraud and _affirmed(_FRAUD_CLAIM):
+        problems.append("claims a link to confirmed fraud; the graph shows none")
+    if not linkage and _affirmed(_LINKAGE_CLAIM):
+        problems.append("claims shared identifiers; the graph shows none")
+    return problems

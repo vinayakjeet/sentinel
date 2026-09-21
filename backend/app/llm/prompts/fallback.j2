@@ -3,5 +3,5 @@ This application scored {{ decision.score }} out of 1000 and was placed in the {
 {%- else -%}
 This application scored {{ decision.score }} out of 1000 and was placed in the {{ decision.band }} band{% if decision.decision %} ({{ decision.decision|lower|replace('_', ' ') }}){% endif %}. No individual risk factors were recorded against it.
 {%- endif %}
-{%- if graph and graph.known_fraud_entities %} It also shares {{ graph.known_fraud_entities }} identifier{{ 's' if graph.known_fraud_entities > 1 else '' }} with applications already confirmed as fraudulent.{% endif %}
- The language model is unavailable, so this summary is generated directly from the decision record.
+{%- if signals.known_fraud_2hop %} The entity graph recorded {{ signals.known_fraud_2hop }} confirmed-fraud application{{ 's' if signals.known_fraud_2hop > 1 else '' }} within 2 hops of it when it was decided.{% endif %}
+ This summary is generated directly from the decision record.

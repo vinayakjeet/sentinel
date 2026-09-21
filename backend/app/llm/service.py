@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.llm import tools
 from app.llm.config import LLMSettings, get_llm_settings
-from app.llm.guardrails import check_input, filter_citations, mentions_foreign_reason
+from app.llm.guardrails import check_input, filter_citations, mentions_foreign_reason, unsupported_claims
 from app.llm.provider import LLMProvider, LLMUnavailable, build_provider
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,14 @@ BLOCKED_ANSWER = (
     "change a score or an outcome, and I can't act on instructions embedded in a question."
 )
 NOT_FOUND_ANSWER = "No decision with that id exists."
+
+# How each recorded graph signal is put to the model. Unknown keys are shown under their own name.
+_SIGNAL_LABELS = {
+    "component_size": "applications in the linked cluster",
+    "distinct_names_per_device": "different applicant names seen on this device",
+    "known_fraud_2hop": "confirmed-fraud applications within 2 hops",
+    "component_velocity_24h": "applications from this cluster in the last 24 hours",
+}
 
 
 @lru_cache
@@ -56,6 +64,29 @@ class CopilotResult(BaseModel):
     cited_reasons: list[str]
     blocked: bool
     fallback_used: bool
+
+
+def _graph_signals(decision: dict[str, Any]) -> list[tuple[str, Any]]:
+    signals = decision.get("graph_signals")
+    if not isinstance(signals, dict):
+        return []
+    if not any(_has_linkage(decision)):
+        # Counts like "1 name per device" are bookkeeping for an unlinked application; handed to a
+        # model they get narrated as if they were evidence ("the device showed a different name").
+        return [("linked applications", "none recorded; no identifier is shared with another application")]
+    return [(_SIGNAL_LABELS.get(k, k.replace("_", " ")), v) for k, v in signals.items() if v is not None]
+
+
+def _has_linkage(decision: dict[str, Any]) -> tuple[bool, bool]:
+    """(any shared identifiers, any confirmed-fraud link) according to the decision's recorded signals.
+
+    Deliberately the signals stored with the decision, not the live entity graph: the live graph keeps
+    growing after the decision was made (and flags an applicant's own identifiers once their fraud
+    label is known), so it can contradict the record the analyst is looking at.
+    """
+    sig = decision.get("graph_signals") if isinstance(decision.get("graph_signals"), dict) else {}
+    fraud = (sig.get("known_fraud_2hop") or 0) > 0
+    return (sig.get("component_size") or 0) > 1 or fraud, fraud
 
 
 def _reason_entries(decision: dict[str, Any]) -> list[dict[str, Any]]:
@@ -106,9 +137,9 @@ def _reason_universe() -> frozenset[str]:
     return frozenset()
 
 
-def _render_fallback(decision: dict[str, Any], reasons: list[dict], graph: dict | None) -> str:
+def _render_fallback(decision: dict[str, Any], reasons: list[dict]) -> str:
     return _env().get_template("fallback.j2").render(
-        decision=decision, reasons=reasons, graph=graph
+        decision=decision, reasons=reasons, signals=(decision.get("graph_signals") or {})
     ).strip()
 
 
@@ -118,18 +149,13 @@ def build_context(decision_id: uuid.UUID, settings: LLMSettings) -> dict[str, An
     if decision is None:
         return None
 
-    graph: dict[str, Any] | None = None
     similar: list[dict[str, Any]] = []
-    try:
-        graph = tools.call("get_entity_graph", application_id=decision["application_id"])
-    except Exception:
-        logger.warning("entity graph tool failed; continuing without linkage", exc_info=True)
     try:
         similar = tools.call("find_similar_cases", decision_id=decision_id, k=settings.llm_similar_cases)
     except Exception:
         logger.warning("similar cases tool failed; continuing without them", exc_info=True)
 
-    return {"decision": decision, "graph": graph, "similar": similar}
+    return {"decision": decision, "similar": similar}
 
 
 def ask(
@@ -153,16 +179,18 @@ def ask(
     decision = context["decision"]
     reasons = _reason_entries(decision)
     allowed = {r["feature"] for r in reasons if r["feature"]}
-    fallback_answer = _render_fallback(decision, reasons, context["graph"])
+    fallback_answer = _render_fallback(decision, reasons)
 
     provider = provider or build_provider(settings)
 
     try:
         system = _env().get_template("system.j2").render()
         user = _env().get_template("context.j2").render(
-            decision=decision, reasons=reasons, graph=context["graph"],
-            similar=context["similar"], question=guard.text,
+            decision=decision, reasons=reasons,
+            similar=context["similar"], signals=_graph_signals(decision), question=guard.text,
         )
+        # Everything the model is allowed to state as fact: the context minus the analyst's question.
+        known_text = user.rsplit("ANALYST QUESTION", 1)[0]
         raw = provider.complete(system=system, user=user)
     except LLMUnavailable as exc:
         logger.warning("llm unavailable, using templated answer: %s", exc)
@@ -188,6 +216,19 @@ def ask(
         # The model explained the decision with a factor that played no part in it. That is the
         # failure mode that would make an adverse-action notice wrong, so we do not ship it.
         logger.warning("llm answer cited a factor absent from the decision; using templated answer")
+        return CopilotResult(
+            answer=fallback_answer, cited_reasons=sorted(allowed), blocked=False, fallback_used=True
+        )
+
+    linkage, known_fraud = _has_linkage(decision)
+    problems = unsupported_claims(
+        parsed.answer, reasons, known_text=known_text, linkage=linkage, known_fraud=known_fraud
+    )
+    if problems:
+        # Well-formed, on-topic, and still wrong: e.g. "the credit risk score was low" when the reason
+        # code only says the score contributed. Same treatment as a foreign reason: do not ship it.
+        logger.warning("llm answer made claims the record does not support (%s); using templated answer",
+                       "; ".join(problems))
         return CopilotResult(
             answer=fallback_answer, cited_reasons=sorted(allowed), blocked=False, fallback_used=True
         )

@@ -126,3 +126,36 @@ def test_replay_reads_identifiers_as_strings(tmp_path):
     )
     _, record = next(base_rows(tmp_path / "s.csv"))
     assert record["phone"] == "916000856369" and record["device_id"] == "123"
+
+
+def test_replay_pass_identifiers_are_isolated_from_history_and_other_passes(payload):
+    """Each replay pass gets its own entities, and the namespaced row still passes strict validation."""
+    from app.schemas.application import ApplicationEvent
+    from app.services.entity_resolver import entity_keys
+    from app.services.replay import namespace_identifiers
+
+    def keys(row: dict) -> set:
+        return set(entity_keys(ApplicationEvent.model_validate(row)))
+
+    history, pass_a, pass_b = payload, namespace_identifiers(payload, 17), namespace_identifiers(payload, 18)
+    assert pass_a["applicant_name"] == history["applicant_name"]
+    for field in ("device_id", "email", "phone", "address", "ip"):
+        assert pass_a[field] != history[field] and pass_a[field] != pass_b[field]
+    assert not keys(history) & keys(pass_a)
+    assert not keys(pass_a) & keys(pass_b)
+
+
+def test_starting_the_replay_clears_the_detector_window(client):
+    """A stale window from the previous run must not be compared with the new run's first events."""
+    monitor = client.app.state.services.drift.monitor
+    for _ in range(50):
+        monitor.observe(0.9)
+    assert monitor.events_seen >= 50
+    try:
+        assert client.post("/api/v1/stream/start").status_code == 200
+        client.post("/api/v1/stream/stop")
+        # 50 stale events are gone; the run itself may have observed a handful before it was stopped
+        assert monitor.events_seen < 50
+    finally:
+        client.post("/api/v1/stream/stop")
+        client.post("/api/v1/metrics/drift/reset")
